@@ -1,0 +1,64 @@
+[
+  {
+    "category": "Namaz okalyşy",
+    "icon": "mosque",
+    "items": [
+      {
+        "question": "Namaz nähili okalýar?",
+        "answer": "Namaz yslamyň ikinji rüknüdir. Her wagt namazynyň öz rekat sany we okalyş tertibi bardyr. Hanafi mezhebine görä namazyň umumy tertibi:\n\n1. Niýet etmek (Meselem: 'Niýet etdim Allahyň razylygy üçin şu günüň Ertir namazynyň 2 rekat parzyny okamaga').\n2. Iftitah tekbiri: 'Allahu Ekber' diýip elleri galdyryp gowşurmak.\n3. Kyýam we Kyraat: Aýakda durup Subhaneke dogasyny okamak, soňra Fatiha we bir sura (zam-y sura) okamak.\n4. Ruku: 'Allahu Ekber' diýip eňilmek, rukuuda 'Subhane Rabbiyel-Azim' (3 gezek) diýmek. Aýaga galganda 'Semi'allahu limen hamideh' we 'Rabbena lekel-hamd' diýmek.\n5. Sejde: 'Allahu Ekber' diýip ýere egilmek, maňlaýy, burny, elleri, dyzlary we aýak barmaklaryny ýere goýmak. Sejdede 'Subhane Rabbiyel-Ala' (3 gezek) diýmek. İki sejde arasynda eňil oturmak.\n6. Ka'de-i ahire (Soňky oturyş): Düzgünlere görä oturyşda 'Ettehiýatü', 'Allahümme Salli', 'Allahümme Barik' we 'Rabbena etina' dogalaryny okamak.\n7. Salam: 'Es-selamü aleýkum we rahmetullah' diýip ilki saga, soňra çepe salam bermek."
+      },
+      {
+        "question": "Juma namazy nähili okalýar?",
+        "answer": "Juma namazy diňe jemagat bilen okalýar we jemi 10 rekatdyr:\n\n1. Ilkinji sünnet (4 rekat): Ýekelikde okalýar. Niýeti: 'Niýet etdim Allahyň razylygy üçin Juma namazynyň ilkinji 4 rekat sünnetini okamaga'. Öýle namazynyň ilkinji sünneti ýaly okalýar.\n2. Juma parzy (2 rekat): Ymama uýulyp okalýar. Niýeti: 'Niýet etdim ymama uýup, Juma namazynyň 2 rekat parzyny okamaga'. Ymam sesli okaýar, jemagat bolsa diňleýär.\n3. Soňky sünnet (4 rekat): Ýekelikde okalýar. Niýeti: 'Niýet etdim Juma namazynyň soňky 4 rekat sünnetini okamaga'.\n\nJuma namazyny okamak akyly-başynda, azat, sagdyn, ýolagçy bolmadyk we ýörite şertlere laýyk gelýän her bir musulman erkege parzdyr."
+      },
+      {
+        "question": "Baýram namazy nähili okalýar?",
+        "answer": "Oraza we Gurban baýramy namazlary 2 rekatdyr, jemagat bilen okalýar. Beýleki namazlardan tapawutlylykda her rekatda goşmaça 3 sany tekbir (wajyp tekbirleri) bardyr:\n\n1. Birinji rekat:\n- Niýet edilýär (Niýet etdim wajyp bolan Oraza/Gurban baýram namazyny okamaga, uýdum ymama).\n- Iftitah tekbiri alynýar (Allahu Ekber) we eller gowşurylýar. Subhaneke okalýar.\n- Ymam sesli 3 gezek tekbir aýdýar, eller gulaklara galdyrylyp aşak goýberilýär. 4-nji tekbirde eller gowşurylýar.\n- Ymam Fatiha we sura okaýar, ruku we sejde edilýär.\n\n2. Ikinji rekat:\n- Ymam aýakda durup Fatiha we sura okaýar.\n- Rukua gitmezden öň ymam 3 gezek tekbir aýdýar, ellerimizi galdyryp aşak goýberýäris. 4-nji tekbirde elleri galdyrman göni rukua gidilýär.\n- Sejdelerden soň oturylyp salam berilýär. Namazdan soň hutbe diňlemek sünnetdir."
+      },
+      {
+        "question": "Jenaza namazy nähili okalýar?",
+        "answer": "Jenaza namazy ruku we sejdesi bolmadyk, diňe aýakda durup okalýan wajyp bolan farz-y kifaýe namazdyr. Namazyň 4 tekbiri bardyr:\n\n1. Niýet etmek: 'Niýet etdim Alla üçin namaza, meýit üçin doga etmäge, uýdum häzirki ymama'. Ymam bilen bilelikde 1-nji tekbir (Allahu Ekber) alynýar, eller gowşurylýar. Içinden 'Subhaneke' dogasy okalýar (goşmaça 'we jelle senauk' diýilýär).\n2. Ikinji tekbir: Eller galdyrylman 'Allahu Ekber' diýilýär. 'Salli' we 'Barik' dogalary okalýar.\n3. Üçünji tekbir: Ýene eller galdyrylman tekbir alynýar. Jenaza dogasy okalýar. (Bilmýänler 'Rabbena' dogasyny okap biler).\n4. Dördünji tekbir: Eller galdyrylman tekbir alynýar. Soňra elleri goýberip, ilki saga, soň çepe 'Es-selamü aleýkum we rahmetullah' diýlip salam berilýär."
+      }
+    ]
+  },
+  {
+    "category": "Täret we Gusul",
+    "icon": "water_drop",
+    "items": [
+      {
+        "question": "Täretiň farzlary nämelerdir?",
+        "answer": "Hanafi mezhebine görä täret almagyň farzlary dörtdür:\n\n1. Ýüzi bir gezek ýumak (maňlaýyň saç bitýän ýerinden eňegiň aşagyna we gulak ýelkenlerine çenli).\n2. Iki eli tirsekler bilen bilelikde bir gezek ýumak.\n3. Başa dörtten bir (1/4) mukdarynda mes çekmek (elleri suwlap başyň üstüne sürtmek).\n4. Iki aýagy topuklary bilen bilelikde bir gezek ýumak.\n\nBu dördüniň biri berjaý edilmese täret dogry bolmaýar."
+      },
+      {
+        "question": "Gusulyň (boý täretiniň) farzlary nämelerdir?",
+        "answer": "Gusul almagyň parzlary üçdür:\n\n1. Agzy suw bilen doly çaýkamak (mazmaza).\n2. Burny suw çekip arassalamak (istinşak).\n3. Bütin bedeni gurap galan ýeri galmaz ýaly doly ýumak.\n\nEger bedende suw geçirmeýän reňk, lak ýa-da hamyr bar bolsa, olary aýryp soň ýumaly. Gulakdaky syrganyň deşigi ýaly ýerlere hem suw ýetmelidir."
+      },
+      {
+        "question": "Täreti nämeler bozar?",
+        "answer": "Täreti bozyjy esasy ýagdaýlar:\n\n1. Bedenden çykan her hili hapalyklar, gan ýa-da iriň (eger ganan ýerinden ýaýrasa).\n2. Agyz doly gusmak.\n3. Arka ýykylyp, ýaplanyp ýa-da uklap galmak.\n4. Namaz okaýan wagtyň ýanyndaky adama eşdiljek derejede sesli gülmek.\n5. Dellenmek ýa-da huşdan gitmek.\n6. Uly we kiçi täret ýollaryndan bir zadyň çykmagy."
+      }
+    ]
+  },
+  {
+    "category": "Möhüm Maglumatlar",
+    "icon": "auto_stories",
+    "items": [
+      {
+        "question": "Mekruh (kerahet) wagtlar haýsylardyr?",
+        "answer": "Namaz okamak mekruh bolan wagtlar şulardyr:\n\n1. Gün dogup başlandan tä 40-45 minut geçýänçä (Ertir namazy wagty geçensoň).\n2. Gün tam depede duran wagty (Öýläne 30-40 minut galanda).\n3. Gün ýaşyp barýan wagty (Agşama 45 minut galandan tä gün ýaşýança. Ýöne şol günüň ikindi namazy okalmadyk bolsa, kerahet wagty hem bolsa okalmalydyr)."
+      },
+      {
+        "question": "Unudylan ýalňyşlyklar üçin näme etmeli? (Sejde-i Sehiw)",
+        "answer": "Namazyň wajyplaryndan biri gişige goýulsa ýa-da unudylsa 'Sejde-i sehiw' (ýalňyşlyk sejdesi) edilmelidir.\n\nEtmeli iş:\nSoňky oturyşda 'Ettehiýatü' okalyp, diňe saga salam berilýär. Soňra ýene 'Allahu Ekber' diýip iki gezek sejde edilýär we täzeden oturyp 'Ettehiýatü', 'Salli-Barik', 'Rabbena' okalyp, iki tarapa salam berilýär."
+      },
+      {
+        "question": "Musapyrlyk (Ýolagçy) namazy nähili okalýar?",
+        "answer": "Öz ýaşaýan ýerinden iň az 90 km uzaklyga gitmek niýeti bilen ýola çykan adam musulmançylykda ýolagçy (musapyr) hasaplanýar. Ýolagçynyň hökümleri:\n\n1. 4 rekatlyk parz namazlar 2 rekat edip gysgaldylyp okalýar (Ertir, agşam we wajyp bolan witr namazlary gysgaldylmaýar).\n2. Ýolda wagt darlygy ýa-da kynçylyk bar bolsa sünnetler okalman bilner. Parhatçylykda sünnetleri okamak has gowy hasaplanýar.\n3. Eger ýolagçy ýerli ymama uýsa, namazyny ymam bilen doly okaýar."
+      },
+      {
+        "question": "Sünnetleriň ähmiýeti näme?",
+        "answer": "Pygamberimiziň (s.a.w.) eden we bize maslahat beren amallaryna sünnet diýilýär. Namazlaryň sünnetleri:\n\n1. Kyýamat gününde hasap berlende, parz namazlardaky kemçilikler ilki bilen sünnet namazlar arkaly doldurylar.\n2. Pygamberimiziň (s.a.w.) şepagatyna ýetmäge sebäp bolar.\n3. Sünnetler parz namazlary gorap saklaýan gala ýalydyr, olary yzygiderli okamak kalbyň rahatlygyny artdyrýar."
+      }
+    ]
+  }
+]
