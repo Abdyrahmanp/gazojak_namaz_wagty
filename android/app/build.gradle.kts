@@ -5,15 +5,14 @@ plugins {
 }
 
 android {
-    namespace = "com.example.yeni_proje_yapisi" // Burayı kendi paket ismine göre değiştirebilirsin
+    namespace = "com.example.gazojak_namaz_wagty"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        // Local notifications için gereken ayar
-        coreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -21,11 +20,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.yeni_proje_yapisi" // Burayı kendi paket ismine göre değiştirebilirsin
+        applicationId = "com.example.gazojak_namaz_wagty"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -40,6 +40,10 @@ flutter {
 }
 
 dependencies {
-    // Local notifications için gereken kütüphane
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    // Rakamı sistemin istediği gibi 2.1.4 olarak güncelledik:
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
+
+
+
+

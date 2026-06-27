@@ -1,4 +1,4 @@
-package com.example.yeni_proje_yapisi
+package com.example.gazojak_namaz_wagty
 
 import io.flutter.embedding.android.FlutterActivity
 
