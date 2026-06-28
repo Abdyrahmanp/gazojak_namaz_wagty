@@ -127,7 +127,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Developer credit section
+                // Data reliability section
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: sectionBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.verified_rounded, color: AppColors.emeraldGreen, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Maglumatlaryň ygtybarlylgy',
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Programmadaky namaz wagtlary resmi Türkmenistan dini senenamasy esasynda hasaplanyp, '
+                        'Sorag-Jogap bölüminiň mazmunlary ygtybarly dini çeşmeler, din alymlarymyzyň '
+                        'eserleri we resmi dini guramalar tarapyndan tassyklanan maglumatlar esasynda taýýarlandy.\n\n'
+                        'Eger ýalňyşlyk ýa-da anyklaşdyrylmaly maglumat görseňiz, programmanyň içindäki '
+                        '"Bize bildiriň" düwmesi arkaly habar beriň.',
+                        style: TextStyle(color: subColor, fontSize: 12, height: 1.6),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Developer credit section (en aşakda)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -167,46 +207,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Data reliability section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: sectionBg,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.verified_rounded, color: AppColors.emeraldGreen, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Maglumatlaryň ygtybarlylgy',
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Programmadaky namaz wagtlary resmi Türkmenistan dini senenamasy esasynda hasaplanyp, '
-                        'Sorag-Jogap bölüminiň mazmunlary ygtybarly dini çeşmeler, din alymlarymyzyň '
-                        'eserleri we resmi dini guramalar tarapyndan tassyklanan maglumatlar esasynda taýýarlandy.\n\n'
-                        'Eger ýalňyşlyk ýa-da anyklaşdyrylmaly maglumat görseňiz, programmanyň içindäki '
-                        '"Bize bildiriň" düwmesi arkaly habar beriň.',
-                        style: TextStyle(color: subColor, fontSize: 12, height: 1.6),
                       ),
                     ],
                   ),

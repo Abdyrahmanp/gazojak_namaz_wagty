@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../providers/app_state.dart';
+import '../services/notification_service.dart';
 import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
 import '../widgets/turkmen_date_picker.dart';
@@ -110,6 +111,32 @@ class _HomeScreenState extends State<HomeScreen> {
       _isMekruh = isMekruh;
       _mekruhMinutesLeft = mekruhMinutesLeft;
     });
+
+    final isShowingToday = selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day;
+
+    // Namaz wagty geçişinde bildiriş
+    NotificationService().checkPrayerTransition(
+      activePrayerKey: activeKey,
+      soundEnabled: widget.appState.notificationSoundEnabled,
+      isShowingToday: isShowingToday,
+    );
+
+    // Yzygiderli wagtlar paneli
+    if (widget.appState.persistentNotificationEnabled && isShowingToday) {
+      final dailyTimes = service.getTimesForDate(selectedDate);
+      final shortCountdown =
+          '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      final nextName =
+          TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
+      NotificationService().showPersistentNotification(
+        nextPrayerName: nextName,
+        remainingTime: shortCountdown,
+        dailyTimes: dailyTimes,
+        offsets: offsets,
+      );
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {

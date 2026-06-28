@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/prayer_time_service.dart';
+import '../services/notification_service.dart';
 
 class AppState extends ChangeNotifier {
   final PrayerTimeService prayerService = PrayerTimeService();
@@ -52,6 +53,19 @@ class AppState extends ChangeNotifier {
       // ignore: avoid_print
       print('Error loading settings: $e');
     }
+
+    try {
+      await NotificationService().initialize();
+      await NotificationService().schedulePrayerNotifications(
+        prayerService: prayerService,
+        offsets: _offsets,
+        soundEnabled: _notificationSoundEnabled,
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print('Notification setup error: $e');
+    }
+
     notifyListeners();
   }
 
@@ -67,6 +81,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('persistent_notification_enabled', val);
+    if (!val) {
+      await NotificationService().cancelPersistentNotification();
+    }
   }
 
   Future<void> toggleNotificationSound(bool val) async {
@@ -74,6 +91,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notification_sound_enabled', val);
+    await NotificationService().schedulePrayerNotifications(
+      prayerService: prayerService,
+      offsets: _offsets,
+      soundEnabled: val,
+    );
   }
 
   void setSelectedDate(DateTime date) {
@@ -92,6 +114,11 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('offset_$key', val);
+      await NotificationService().schedulePrayerNotifications(
+        prayerService: prayerService,
+        offsets: _offsets,
+        soundEnabled: _notificationSoundEnabled,
+      );
     }
   }
 
@@ -104,6 +131,11 @@ class AppState extends ChangeNotifier {
     for (final key in _offsets.keys) {
       await prefs.setInt('offset_$key', 0);
     }
+    await NotificationService().schedulePrayerNotifications(
+      prayerService: prayerService,
+      offsets: _offsets,
+      soundEnabled: _notificationSoundEnabled,
+    );
   }
 
   Future<void> incrementZikir() async {

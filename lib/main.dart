@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'providers/app_state.dart';
 import 'screens/main_navigation.dart';
+import 'services/notification_service.dart';
 import 'utils/colors.dart';
 import 'utils/tk_translations.dart';
 
@@ -28,6 +30,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final AppState _appState = AppState();
   bool _isLoading = true;
+  bool _permissionRequested = false;
 
   @override
   void initState() {
@@ -40,6 +43,32 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _requestNotificationPermission(BuildContext context) async {
+    if (_permissionRequested) return;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    _permissionRequested = true;
+
+    final granted = await NotificationService().requestPermissions();
+    if (!granted && context.mounted) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Bildiriş rugsady'),
+          content: const Text(
+            'Namaz wagty habarlandyryşlary we yzygiderli wagtlar paneli işlemegi üçin '
+            'bildiriş rugsadyny bermegiňizi haýyş edýäris. Sazlamalar bölüminden hem açyp bilersiňiz.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Bolýar'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -169,7 +198,14 @@ class _MyAppState extends State<MyApp> {
             ),
           ),
           
-          home: MainNavigation(appState: _appState),
+          home: Builder(
+            builder: (context) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _requestNotificationPermission(context);
+              });
+              return MainNavigation(appState: _appState);
+            },
+          ),
         );
       },
     );

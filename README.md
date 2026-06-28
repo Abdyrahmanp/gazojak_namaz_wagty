@@ -1,4 +1,4 @@
-# yeni_proje_yapisi
+# gazojak_namaz_wagty
 
 A new Flutter project.
 
