@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/site_config.dart';
 import '../models/faq_item.dart';
 
 class FaqService {
   static const String _cacheKey = 'cached_faq_data';
   static const String _remoteUrlKey = 'faq_remote_url';
   
-  // Default raw Github URL or custom server URL where user can host their updated faq.json.
-  static const String defaultRemoteUrl = 'https://raw.githubusercontent.com/gelnox/gazojak_namaz_wagty/main/assets/data/faq.json';
+  static const String defaultRemoteUrl = SiteConfig.faqJsonUrl;
 
   /// Loads FAQ data instantly. First checks the local cached data in SharedPreferences.
   /// If none exists, loads from the local assets/data/faq.json asset.
@@ -50,7 +50,8 @@ class FaqService {
   Future<bool> updateFaqDataFromServer({String? customUrl}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final urlString = customUrl ?? prefs.getString(_remoteUrlKey) ?? defaultRemoteUrl;
+      final urlString =
+          customUrl ?? await _resolveRemoteUrl(prefs);
       final url = Uri.parse(urlString);
       
       final client = HttpClient();
@@ -83,7 +84,19 @@ class FaqService {
 
   Future<String> getRemoteUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_remoteUrlKey) ?? defaultRemoteUrl;
+    return _resolveRemoteUrl(prefs);
+  }
+
+  Future<String> _resolveRemoteUrl(SharedPreferences prefs) async {
+    final stored = prefs.getString(_remoteUrlKey);
+    if (stored == null) return defaultRemoteUrl;
+    if (stored.contains('githubusercontent.com') ||
+        stored.contains('github.com') ||
+        stored.contains('gazojak_namaz_wagty.byethost')) {
+      await prefs.setString(_remoteUrlKey, defaultRemoteUrl);
+      return defaultRemoteUrl;
+    }
+    return stored;
   }
 
   Future<void> clearCache() async {

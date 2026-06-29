@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state.dart';
+import '../utils/email_launcher.dart';
 import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
 import '../models/faq_item.dart';
 import '../services/faq_service.dart';
+import '../config/site_config.dart';
 import 'faq_detail_screen.dart';
 
 class FaqScreen extends StatefulWidget {
@@ -65,7 +67,7 @@ class _FaqScreenState extends State<FaqScreen> {
               children: [
                 Icon(Icons.check_circle_outline_rounded, color: Colors.white),
                 SizedBox(width: 8),
-                Text('Maglumatlar üstünlikli täzelendi! 🔄'),
+                Text(TkTranslations.faqSyncSuccess),
               ],
             ),
             backgroundColor: AppColors.emeraldGreen,
@@ -84,7 +86,7 @@ class _FaqScreenState extends State<FaqScreen> {
               children: [
                 Icon(Icons.cloud_off_rounded, color: Colors.white),
                 SizedBox(width: 8),
-                Text('Täzeläp bolmady. Baglanyşygy barlaň.'),
+                Text(TkTranslations.faqSyncFailed),
               ],
             ),
             backgroundColor: Colors.orangeAccent,
@@ -172,6 +174,7 @@ class _FaqScreenState extends State<FaqScreen> {
                   style: TextStyle(color: tc, fontSize: 13),
                   decoration: InputDecoration(
                     labelText: 'Maglumat baglanyşygy (JSON URL)',
+                    hintText: SiteConfig.faqJsonUrl,
                     labelStyle: const TextStyle(color: AppColors.emeraldGreen, fontSize: 12),
                     filled: true,
                     fillColor: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
@@ -355,16 +358,28 @@ class _FaqScreenState extends State<FaqScreen> {
                       if (!formKey.currentState!.validate()) return;
                       final name = nameCtrl.text.trim().isEmpty ? 'Ulanyjy' : nameCtrl.text.trim();
                       final question = questionCtrl.text.trim();
-                      final sub = Uri.encodeComponent('Gazojak Namaz Wagty — Täze Sorag');
-                      final body = Uri.encodeComponent('Kimden: $name\n\nSoragyňyz:\n$question');
-                      final uri = Uri.parse('mailto:gazojaknamazwagty@gmail.com?subject=$sub&body=$body');
-                      try {
-                        if (await canLaunchUrl(uri)) {
-                          HapticFeedback.mediumImpact();
-                          await launchUrl(uri);
-                          if (context.mounted) Navigator.pop(context);
-                        }
-                      } catch (_) {}
+
+                      final launched = await EmailLauncher.open(
+                        subject: 'Gazojak Namaz Wagty — Täze Sorag',
+                        body: 'Kimden: $name\n\nSoragyňyz:\n$question',
+                      );
+
+                      if (!context.mounted) return;
+                      if (launched) {
+                        HapticFeedback.mediumImpact();
+                        Navigator.pop(context);
+                      } else {
+                        HapticFeedback.vibrate();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(TkTranslations.emailLaunchFailed),
+                            backgroundColor: Colors.orangeAccent,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            margin: const EdgeInsets.all(16),
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.send_rounded, size: 18),
                     label: const Text(
@@ -757,9 +772,16 @@ class FaqItemCard extends StatelessWidget {
     required this.appState,
   });
 
+  String _answerPreview(String answer) {
+    final flat = answer.replaceAll('\n', ' ').trim();
+    if (flat.length <= 110) return flat;
+    return '${flat.substring(0, 110)}…';
+  }
+
   @override
   Widget build(BuildContext context) {
     final tc = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final sc = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
     final cardBg = isDark ? AppColors.darkCardBg : AppColors.lightCardBg;
     final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
 
@@ -790,24 +812,68 @@ class FaqItemCard extends StatelessWidget {
             );
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            padding: const EdgeInsets.all(16),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    item.question,
-                    style: TextStyle(
-                      color: tc,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+                Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.emeraldGreen.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.menu_book_rounded,
+                    color: AppColors.emeraldGreen,
+                    size: 18,
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: AppColors.emeraldGreen,
-                  size: 16,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.question,
+                        style: TextStyle(
+                          color: tc,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _answerPreview(item.answer),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: sc,
+                          fontSize: 13,
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Doly oka →',
+                        style: TextStyle(
+                          color: AppColors.emeraldGreen.withValues(alpha: 0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: sc.withValues(alpha: 0.5),
+                    size: 14,
+                  ),
                 ),
               ],
             ),

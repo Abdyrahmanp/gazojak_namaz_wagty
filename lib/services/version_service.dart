@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/site_config.dart';
 
 class AppVersionInfo {
   final String versionName;
@@ -32,8 +33,7 @@ class VersionService {
   static const String _versionUrlKey = 'version_check_url';
   static const String _dismissedVersionKey = 'dismissed_version_code';
   
-  // Default URL to check version.json
-  static const String defaultVersionUrl = 'https://raw.githubusercontent.com/gelnox/gazojak_namaz_wagty/main/version.json';
+  static const String defaultVersionUrl = SiteConfig.versionJsonUrl;
 
   // Current app hardcoded version
   static const String currentVersionName = '1.0.0';
@@ -44,7 +44,7 @@ class VersionService {
   Future<AppVersionInfo?> fetchRemoteVersion() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final urlString = prefs.getString(_versionUrlKey) ?? defaultVersionUrl;
+      final urlString = await _resolveVersionUrl(prefs);
       final url = Uri.parse(urlString);
 
       final client = HttpClient();
@@ -90,6 +90,19 @@ class VersionService {
 
   Future<String> getVersionUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_versionUrlKey) ?? defaultVersionUrl;
+    return _resolveVersionUrl(prefs);
+  }
+
+  /// Köne GitHub URL-sinden täze web sahypasyna geçirmek.
+  Future<String> _resolveVersionUrl(SharedPreferences prefs) async {
+    final stored = prefs.getString(_versionUrlKey);
+    if (stored == null) return defaultVersionUrl;
+    if (stored.contains('githubusercontent.com') ||
+        stored.contains('github.com') ||
+        stored.contains('gazojak_namaz_wagty.byethost')) {
+      await prefs.setString(_versionUrlKey, defaultVersionUrl);
+      return defaultVersionUrl;
+    }
+    return stored;
   }
 }

@@ -1,4 +1,4 @@
-name: yeni_proje_yapisi
+name: gazojak_namaz_wagty
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -39,6 +39,7 @@ dependencies:
   flutter_local_notifications: ^22.0.1
   timezone: ^0.11.0
   url_launcher: ^6.3.2
+  share_plus: ^12.0.1
 
 dev_dependencies:
   flutter_test:

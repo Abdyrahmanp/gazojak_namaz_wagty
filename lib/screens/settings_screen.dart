@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state.dart';
+import '../utils/email_launcher.dart';
 import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
 import '../services/version_service.dart';
+import '../config/site_config.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AppState appState;
@@ -33,37 +35,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
     final msg = _msgCtrl.text.trim();
-    final sub = Uri.encodeComponent('Gazojak Namaz Wagty — Goldaw');
-    final body = Uri.encodeComponent('Kimden: $name\nE-poçta: $email\n\n$msg');
-    final uri = Uri.parse('mailto:gazojaknamazwagty@gmail.com?subject=$sub&body=$body');
-    try {
-      if (await canLaunchUrl(uri)) {
-        HapticFeedback.mediumImpact();
-        await launchUrl(uri);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(TkTranslations.supportSuccess),
-            backgroundColor: AppColors.emeraldGreen,
-          ),
-        );
-        _nameCtrl.clear();
-        _emailCtrl.clear();
-        _msgCtrl.clear();
-      }
-    } catch (_) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('E-poçta Ugradyp Bolmady'),
-          content: Text("gazojaknamazwagty@gmail.com\n\n$name ($email)\n$msg"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Ýap'),
-            )
-          ],
+
+    final launched = await EmailLauncher.open(
+      subject: 'Gazojak Namaz Wagty — Goldaw',
+      body: 'Kimden: $name\nE-poçta: $email\n\n$msg',
+    );
+
+    if (!mounted) return;
+
+    if (launched) {
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(TkTranslations.supportSuccess),
+          backgroundColor: AppColors.emeraldGreen,
+        ),
+      );
+      _nameCtrl.clear();
+      _emailCtrl.clear();
+      _msgCtrl.clear();
+    } else {
+      HapticFeedback.vibrate();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(TkTranslations.emailLaunchFailed),
+          backgroundColor: Colors.orangeAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
         ),
       );
     }
@@ -444,7 +443,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: const Icon(Icons.system_update_alt_rounded, color: AppColors.emeraldGreen),
                       ),
                       title: Text(TkTranslations.versionCheckTitle, style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.w600)),
-                      subtitle: Text('${TkTranslations.currentVersionText}${VersionService.currentVersionName} • Sazlamany barla', style: tt.bodySmall?.copyWith(color: sc)),
+                      subtitle: Text('${TkTranslations.currentVersionText}${VersionService.currentVersionName}', style: tt.bodySmall?.copyWith(color: sc)),
                       trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: sc),
                       onTap: () {
                         HapticFeedback.selectionClick();
@@ -599,6 +598,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: tt.bodySmall?.copyWith(color: sc),
                     ),
                     const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        HapticFeedback.selectionClick();
+                        final uri = Uri.parse(SiteConfig.websiteUrl);
+                        try {
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        } catch (_) {}
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.emeraldGreen.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.emeraldGreen.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.language_rounded, color: AppColors.emeraldGreen, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              TkTranslations.visitWebsiteTitle,
+                              style: tt.bodySmall?.copyWith(
+                                color: AppColors.emeraldGreen,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
@@ -606,7 +643,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        TkTranslations.appVersion,
+                        'Wersiýa ${VersionService.currentVersionName}',
                         style: const TextStyle(color: AppColors.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),

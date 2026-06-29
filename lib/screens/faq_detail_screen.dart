@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/app_state.dart';
 import '../models/faq_item.dart';
 import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
+import '../utils/email_launcher.dart';
 
 class FaqDetailScreen extends StatelessWidget {
   final AppState appState;
@@ -19,59 +20,26 @@ class FaqDetailScreen extends StatelessWidget {
   });
 
   Future<void> _shareContent(BuildContext context) async {
-    final text = 'Sorag: ${item.question}\n\nJogap: ${item.answer}\n\n— "Gazojak Namaz Wagty" programmasyndan göçürildi.';
-    await Clipboard.setData(ClipboardData(text: text));
+    final text =
+        'Sorag: ${item.question}\n\nJogap: ${item.answer}\n\n— Gazojak Namaz Wagty programmasy';
     HapticFeedback.mediumImpact();
-    
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_outline_rounded, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Sorag-jogap göçürildi! Indi paýlaşyp bilersiňiz. 📋'),
-          ],
-        ),
-        backgroundColor: AppColors.emeraldGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    await Share.share(text, subject: item.question);
   }
 
   Future<void> _reportError(BuildContext context) async {
-    final sub = Uri.encodeComponent('Gazojak Namaz Wagty — Ýalňyşlyk Bildirişi');
-    final body = Uri.encodeComponent('Sorag: ${item.question}\n\nÝalňyşlyk barada düşündiriş: \n');
-    final uri = Uri.parse('mailto:gazojaknamazwagty@gmail.com?subject=$sub&body=$body');
-    try {
-      if (await canLaunchUrl(uri)) {
-        HapticFeedback.mediumImpact();
-        await launchUrl(uri);
-      } else {
-        throw 'Launch failed';
-      }
-    } catch (_) {
-      if (!context.mounted) return;
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          backgroundColor: appState.isDarkMode ? AppColors.darkDialogBg : Colors.white,
-          title: Text(
-            'E-poçta Ugradyp Bolmady',
-            style: TextStyle(color: appState.isDarkMode ? Colors.white : Colors.black),
-          ),
-          content: Text(
-            'Lütfen gazojaknamazwagty@gmail.com salgysyna hat ýazyň.\n\nSorag: ${item.question}',
-            style: TextStyle(color: appState.isDarkMode ? Colors.white70 : Colors.black87),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Ýap', style: TextStyle(color: AppColors.emeraldGreen)),
-            )
-          ],
+    final launched = await EmailLauncher.open(
+      subject: 'Gazojak Namaz Wagty — Ýalňyşlyk Bildirişi',
+      body: 'Sorag: ${item.question}\n\nÝalňyşlyk barada düşündiriş:\n',
+    );
+    if (!launched && context.mounted) {
+      HapticFeedback.vibrate();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(TkTranslations.emailLaunchFailed),
+          backgroundColor: Colors.orangeAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
         ),
       );
     }
@@ -132,6 +100,7 @@ class FaqDetailScreen extends StatelessWidget {
                     ),
                     IconButton(
                       onPressed: () => _shareContent(context),
+                      tooltip: TkTranslations.shareVia,
                       style: IconButton.styleFrom(
                         backgroundColor: cardBg,
                         shape: RoundedRectangleBorder(
@@ -294,7 +263,7 @@ class FaqDetailScreen extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    Icon(
+                                    const Icon(
                                       Icons.arrow_forward_ios_rounded,
                                       color: AppColors.emeraldGreen,
                                       size: 16,

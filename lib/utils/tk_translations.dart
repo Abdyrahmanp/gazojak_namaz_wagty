@@ -97,12 +97,14 @@ class TkTranslations {
   static const String supportEmailHint  = 'E-poçtaňyz';
   static const String supportMessageHint = 'Hatyňyz…';
   static const String supportSubmitBtn  = 'Hat ugrat';
-  static const String supportSuccess    = 'E-poçta programmasy açyldy. Ugradyp bilersiňiz!';
+  static const String supportSuccess    = 'E-poçta programmasy açyldy. Hatyňyzy ugradyp bilersiňiz!';
+  static const String emailLaunchFailed = 'E-poçta programmasy açylmady. Gmail ýa-da başga e-poçta programmasyny gurnaň.';
+  static const String shareVia          = 'Paýlaş';
   static const String supportError      = 'Ähli meýdançalary dogry dolduryň.';
 
   // ── Legal ────────────────────────────────────────────────────────────────────
   static const String legalTitle    = 'Düzgünler we Syýasat';
-  static const String privacyTitle  = 'Gizlilik Syýasaty';
+  static const String privacyTitle  = 'Gizlinlik Syýasaty';
   static const String privacyContent =
       'Bu programma ulanyjylardan hiç hili şahsy maglumat ýygnamaýar we paýlaşmaýar. '
       'Bütinleý internetsiz we howpsuz işlemek üçin niýetlenendir.';
@@ -151,7 +153,6 @@ class TkTranslations {
 
   static const String aboutContent =
       'Bu programma, Gazojak şäherimizdäki musulman doganlarymyzyň namaz wagtlaryna iň dogry we iň çalt usulda ýetip bilmekleri, dini soraglaryna ygtybarly jogaplar tapyp bilmekleri maksady bilen taýýarlandy. Maksadymyz, tehnologiýany haýyrly bir wesaýata öwrüp, durmuşymyzy aňsatlaşdyrmakdyr.\n\n'
-      'Programmanyň programma üpjünçiligi we dizaýny, şäherimizde ýaşaýan ýaş programmaçy Abdyrahman Döwletgulyýew tarapyndan işlenip düzüldi. Çäkli mümkinçilikler bilen, Play Store çykdajylaryna ulaşman, öz guran web sahypamyz arkaly siziň hyzmatyňyza hödürlendi.\n\n'
       'Programmadaky namaz wagtlary we dini sorag-jogap mazmunlary, resmi we ygtybarly dini çeşmeler esasynda taýýarlandy. Göwün rahatlygy bilen ulanyp bilersiňiz.\n\n'
       'Eger nähilidir bir ýalňyşlyk görseňiz, bize bildirmegiňizi haýyş edýäris.';
 
@@ -167,6 +168,10 @@ class TkTranslations {
   static const String updateDateText        = 'Täzelenen senesi: ';
   static const String whatsNewText          = 'Näme täzelendi:';
   static const String checkUpdateFailed     = 'Täzelemeleri barlap bolmady. Baglanyşygy barlaň.';
+  static const String visitWebsiteTitle     = 'Sahypamyza girmek';
+  static const String visitWebsiteSubtitle  = 'Programmany göçürip almak we maglumat';
+  static const String faqSyncSuccess        = 'Maglumatlar üstünlikli täzelendi!';
+  static const String faqSyncFailed         = 'Täzeläp bolmady. Internet baglanyşygyny barlaň.';
 
   // ── Q&A Feedback ─────────────────────────────────────────────────────────────
   static const String qaReportError         = 'Maglumatda ýalňyşlyk barmy? Bize bildiriň';
