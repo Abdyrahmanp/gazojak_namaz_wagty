@@ -94,7 +94,16 @@ class _TurkmenDatePickerDialogState
     final totalCells = leadingBlanks + daysInMonth;
     const rows = 6;
 
-    return Dialog(
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity > 200 && _canGoPrev) {
+          _prevMonth();
+        } else if (velocity < -200 && _canGoNext) {
+          _nextMonth();
+        }
+      },
+      child: Dialog(
       backgroundColor: bg,
       elevation: isDark ? 24 : 8,
       shadowColor: isDark ? Colors.black54 : Colors.black12,
@@ -256,6 +265,7 @@ class _TurkmenDatePickerDialogState
           ],
         ),
       ),
+    ),
     );
   }
 }

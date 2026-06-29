@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+import '../config/notification_sounds.dart';
 import '../models/prayer_time.dart';
 import '../services/prayer_time_service.dart';
 import '../utils/tk_translations.dart';
@@ -14,7 +15,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
-  String? _lastAlertedPrayerKey;
+  String _activeSoundId = NotificationSounds.defaultSoundId;
 
   static const int persistentNotificationId = 8888;
   static const int alertBaseId = 1000;
@@ -29,15 +30,6 @@ class NotificationService {
     importance: Importance.low,
     playSound: false,
     enableVibration: false,
-  );
-
-  static const _alertChannel = AndroidNotificationChannel(
-    'prayer_alerts',
-    'Namaz wagty habarlandyryşy',
-    description: 'Namaz wagty gelende bildiriş iberýär',
-    importance: Importance.max,
-    playSound: true,
-    enableVibration: true,
   );
 
   Future<void> initialize() async {
@@ -65,13 +57,34 @@ class NotificationService {
           AndroidFlutterLocalNotificationsPlugin>();
       if (android != null) {
         await android.createNotificationChannel(_persistentChannel);
-        await android.createNotificationChannel(_alertChannel);
+        await _ensureAlertChannel(android, _activeSoundId);
       }
 
       _isInitialized = true;
     } catch (e) {
       debugPrint('NotificationService init error: $e');
     }
+  }
+
+  String _channelIdForSound(String soundId) => 'prayer_alerts_$soundId';
+
+  AndroidNotificationChannel _alertChannelFor(String soundId) =>
+      AndroidNotificationChannel(
+        _channelIdForSound(soundId),
+        'Namaz wagty habarlandyryşy',
+        description: 'Namaz wagty gelende bildiriş iberýär',
+        importance: Importance.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound(soundId),
+        enableVibration: true,
+      );
+
+  Future<void> _ensureAlertChannel(
+    AndroidFlutterLocalNotificationsPlugin android,
+    String soundId,
+  ) async {
+    await android.createNotificationChannel(_alertChannelFor(soundId));
+    _activeSoundId = soundId;
   }
 
   Future<bool> requestPermissions() async {
@@ -105,24 +118,42 @@ class NotificationService {
     }
   }
 
+  String _formatPrayerLine(
+    String key,
+    String time,
+    String activeKey,
+    String nextKey,
+  ) {
+    final name = (TkTranslations.prayerNamesShort[key] ?? key).padRight(6);
+    final marker = key == activeKey ? ' ◆' : (key == nextKey ? ' ▶' : '  ');
+    return '$name $time$marker';
+  }
+
   Future<void> showPersistentNotification({
-    required String nextPrayerName,
+    required String nextPrayerKey,
     required String remainingTime,
     required PrayerTime dailyTimes,
     required Map<String, int> offsets,
+    required String activePrayerKey,
   }) async {
     if (!_isAndroid) return;
     if (!_isInitialized) await initialize();
 
-    final b = _adj('bamdat', dailyTimes.bamdat, offsets);
-    final g = _adj('gun', dailyTimes.gun, offsets);
-    final o = _adj('oyle', dailyTimes.oyle, offsets);
-    final i = _adj('ikindi', dailyTimes.ikindi, offsets);
-    final a = _adj('agsam', dailyTimes.agsam, offsets);
-    final y = _adj('yasy', dailyTimes.yasy, offsets);
+    final nextPrayerName =
+        TkTranslations.prayerNamesShort[nextPrayerKey] ?? nextPrayerKey;
 
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
+    const keys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
+
+    final lines = <String>[];
+    for (final key in keys) {
+      final raw = dailyTimes.getTimeByKey(key);
+      final time = _adj(key, raw, offsets);
+      lines.add(_formatPrayerLine(key, time, activePrayerKey, nextPrayerKey));
+    }
+
+    final body = lines.join('\n');
+
+    final androidDetails = AndroidNotificationDetails(
       'persistent_prayer_times',
       'Yzygiderli wagtlar paneli',
       channelDescription: 'Namaz wagtlayny we galan wagty görkezýän panel',
@@ -133,15 +164,19 @@ class NotificationService {
       silent: true,
       showWhen: false,
       icon: '@mipmap/ic_launcher',
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: '$nextPrayerName namazyna — $remainingTime galdy',
+        summaryText: 'Gazojak namaz wagtlary',
+      ),
     );
 
     try {
       await _plugin.show(
         id: persistentNotificationId,
-        title: 'Indiki: $nextPrayerName ($remainingTime galdy)',
-        body: 'E:$b  G:$g  Ö:$o  I:$i  A:$a  Ý:$y',
-        notificationDetails:
-            const NotificationDetails(android: androidDetails),
+        title: '$nextPrayerName namazyna — $remainingTime galdy',
+        body: body,
+        notificationDetails: NotificationDetails(android: androidDetails),
       );
     } catch (e) {
       debugPrint('showPersistentNotification error: $e');
@@ -158,60 +193,35 @@ class NotificationService {
     }
   }
 
-  Future<void> showPrayerAlert(String prayerKey, bool playSound) async {
-    if (!_isAndroid) return;
-    if (!_isInitialized) await initialize();
-
-    final prayerName =
-        TkTranslations.prayerNamesShort[prayerKey] ?? prayerKey;
-
-    final AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      'prayer_alerts',
-      'Namaz wagty habarlandyryşy',
-      channelDescription: 'Namaz wagty gelende bildiriş iberýär',
-      importance: playSound ? Importance.max : Importance.defaultImportance,
-      priority: playSound ? Priority.high : Priority.defaultPriority,
-      playSound: playSound,
-      enableVibration: true,
-      icon: '@mipmap/ic_launcher',
-    );
-
-    try {
-      await _plugin.show(
-        id: alertBaseId + prayerKey.hashCode.abs() % 1000,
-        title: 'Namaz Wagty Boldy',
-        body:
-            'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.',
-        notificationDetails: NotificationDetails(android: androidDetails),
+  AndroidNotificationDetails _alertDetails(bool playSound, String soundId) =>
+      AndroidNotificationDetails(
+        _channelIdForSound(soundId),
+        'Namaz wagty habarlandyryşy',
+        channelDescription: 'Namaz wagty gelende bildiriş iberýär',
+        importance:
+            playSound ? Importance.max : Importance.defaultImportance,
+        priority: playSound ? Priority.high : Priority.defaultPriority,
+        playSound: playSound,
+        sound: playSound ? RawResourceAndroidNotificationSound(soundId) : null,
+        enableVibration: true,
+        icon: '@mipmap/ic_launcher',
       );
-    } catch (e) {
-      debugPrint('showPrayerAlert error: $e');
-    }
-  }
-
-  void checkPrayerTransition({
-    required String activePrayerKey,
-    required bool soundEnabled,
-    required bool isShowingToday,
-  }) {
-    if (!_isAndroid || !isShowingToday) return;
-
-    if (_lastAlertedPrayerKey != null &&
-        _lastAlertedPrayerKey != activePrayerKey) {
-      showPrayerAlert(activePrayerKey, soundEnabled);
-    }
-    _lastAlertedPrayerKey = activePrayerKey;
-  }
 
   Future<void> schedulePrayerNotifications({
     required PrayerTimeService prayerService,
     required Map<String, int> offsets,
     required bool soundEnabled,
+    required String soundId,
   }) async {
     if (!_isAndroid) return;
     if (!_isInitialized) await initialize();
     if (!prayerService.isLoaded) return;
+
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null && soundId != _activeSoundId) {
+      await _ensureAlertChannel(android, soundId);
+    }
 
     await _cancelScheduledAlerts();
 
@@ -228,10 +238,8 @@ class NotificationService {
         final prayerTime = times[key]!;
         if (!prayerTime.isAfter(now)) continue;
 
-        final prayerName =
-            TkTranslations.prayerNamesShort[key] ?? key;
+        final prayerName = TkTranslations.prayerNamesShort[key] ?? key;
         final id = alertBaseId + dayIndex * 10 + i;
-
         final tzTime = tz.TZDateTime.from(prayerTime, tz.local);
 
         try {
@@ -242,19 +250,7 @@ class NotificationService {
                 'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.',
             scheduledDate: tzTime,
             notificationDetails: NotificationDetails(
-              android: AndroidNotificationDetails(
-                'prayer_alerts',
-                'Namaz wagty habarlandyryşy',
-                channelDescription: 'Namaz wagty gelende bildiriş iberýär',
-                importance: soundEnabled
-                    ? Importance.max
-                    : Importance.defaultImportance,
-                priority:
-                    soundEnabled ? Priority.high : Priority.defaultPriority,
-                playSound: soundEnabled,
-                enableVibration: true,
-                icon: '@mipmap/ic_launcher',
-              ),
+              android: _alertDetails(soundEnabled, soundId),
             ),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );
@@ -262,6 +258,33 @@ class NotificationService {
           debugPrint('schedulePrayerNotifications error ($key): $e');
         }
       }
+    }
+  }
+
+  Future<void> previewAlertSound(String soundId) async {
+    if (!_isAndroid) return;
+    if (!_isInitialized) await initialize();
+
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      await _ensureAlertChannel(android, soundId);
+    }
+
+    try {
+      await _plugin.show(
+        id: 7777,
+        title: 'Ses synagy',
+        body: NotificationSounds.optionById(soundId).label,
+        notificationDetails: NotificationDetails(
+          android: _alertDetails(true, soundId),
+        ),
+      );
+      Future.delayed(const Duration(seconds: 2), () {
+        _plugin.cancel(id: 7777);
+      });
+    } catch (e) {
+      debugPrint('previewAlertSound error: $e');
     }
   }
 

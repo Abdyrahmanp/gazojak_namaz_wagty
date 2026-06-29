@@ -7,7 +7,7 @@ import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
 import '../utils/email_launcher.dart';
 
-class FaqDetailScreen extends StatelessWidget {
+class FaqDetailScreen extends StatefulWidget {
   final AppState appState;
   final FaqItem item;
   final List<FaqItem> allItems;
@@ -19,17 +19,34 @@ class FaqDetailScreen extends StatelessWidget {
     required this.allItems,
   });
 
-  Future<void> _shareContent(BuildContext context) async {
+  @override
+  State<FaqDetailScreen> createState() => _FaqDetailScreenState();
+}
+
+class _FaqDetailScreenState extends State<FaqDetailScreen> {
+  late final List<FaqItem> _recommendations;
+
+  @override
+  void initState() {
+    super.initState();
+    final others = widget.allItems
+        .where((x) => x.question != widget.item.question)
+        .toList();
+    others.shuffle();
+    _recommendations = others.take(3).toList();
+  }
+
+  Future<void> _shareContent() async {
     final text =
-        'Sorag: ${item.question}\n\nJogap: ${item.answer}\n\n— Gazojak Namaz Wagty programmasy';
+        'Sorag: ${widget.item.question}\n\nJogap: ${widget.item.answer}\n\n— Gazojak Namaz Wagty programmasy';
     HapticFeedback.mediumImpact();
-    await Share.share(text, subject: item.question);
+    await Share.share(text, subject: widget.item.question);
   }
 
   Future<void> _reportError(BuildContext context) async {
     final launched = await EmailLauncher.open(
       subject: 'Gazojak Namaz Wagty — Ýalňyşlyk Bildirişi',
-      body: 'Sorag: ${item.question}\n\nÝalňyşlyk barada düşündiriş:\n',
+      body: 'Sorag: ${widget.item.question}\n\nÝalňyşlyk barada düşündiriş:\n',
     );
     if (!launched && context.mounted) {
       HapticFeedback.vibrate();
@@ -47,20 +64,15 @@ class FaqDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = appState.isDarkMode;
-    final bgGradient = isDark 
-        ? AppColors.darkBackgroundGradient 
+    final isDark = widget.appState.isDarkMode;
+    final bgGradient = isDark
+        ? AppColors.darkBackgroundGradient
         : AppColors.lightBackgroundGradient;
-    
+
     final tc = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
     final sc = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
     final cardBg = isDark ? AppColors.darkCardBg : AppColors.lightCardBg;
     final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
-
-    // Filter and select 3 random recommended questions
-    final otherItems = allItems.where((x) => x.question != item.question).toList();
-    otherItems.shuffle();
-    final recommendations = otherItems.take(3).toList();
 
     return Scaffold(
       body: Container(
@@ -68,7 +80,6 @@ class FaqDetailScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // Custom Header/AppBar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
@@ -99,7 +110,7 @@ class FaqDetailScreen extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      onPressed: () => _shareContent(context),
+                      onPressed: _shareContent,
                       tooltip: TkTranslations.shareVia,
                       style: IconButton.styleFrom(
                         backgroundColor: cardBg,
@@ -114,7 +125,6 @@ class FaqDetailScreen extends StatelessWidget {
                 ),
               ),
 
-              // Detail Content
               Expanded(
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
@@ -122,7 +132,6 @@ class FaqDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Question Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -138,7 +147,7 @@ class FaqDetailScreen extends StatelessWidget {
                           ],
                         ),
                         child: Text(
-                          item.question,
+                          widget.item.question,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -149,7 +158,6 @@ class FaqDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
 
-                      // Answer Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -162,7 +170,7 @@ class FaqDetailScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              item.answer,
+                              widget.item.answer,
                               style: TextStyle(
                                 color: tc,
                                 fontSize: 15,
@@ -172,7 +180,6 @@ class FaqDetailScreen extends StatelessWidget {
                             const SizedBox(height: 20),
                             Divider(color: borderColor),
                             const SizedBox(height: 10),
-                            // Error notification / feedback link
                             InkWell(
                               onTap: () => _reportError(context),
                               borderRadius: BorderRadius.circular(12),
@@ -211,8 +218,7 @@ class FaqDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 30),
 
-                      // Recommendation Section (Siziň üçin)
-                      if (recommendations.isNotEmpty) ...[
+                      if (_recommendations.isNotEmpty) ...[
                         Text(
                           TkTranslations.qaRecommendTitle,
                           style: TextStyle(
@@ -222,7 +228,7 @@ class FaqDetailScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        ...recommendations.map((recItem) {
+                        ..._recommendations.map((recItem) {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
@@ -233,14 +239,13 @@ class FaqDetailScreen extends StatelessWidget {
                             child: InkWell(
                               onTap: () {
                                 HapticFeedback.selectionClick();
-                                // Push replacement so we stay on a single detail view stack level
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => FaqDetailScreen(
-                                      appState: appState,
+                                      appState: widget.appState,
                                       item: recItem,
-                                      allItems: allItems,
+                                      allItems: widget.allItems,
                                     ),
                                   ),
                                 );

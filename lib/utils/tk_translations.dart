@@ -145,8 +145,8 @@ class TkTranslations {
   static const String themeSetting                 = 'Garaňky tema';
   static const String notificationSoundSetting     = 'Bildiriş sesleri';
   static const String persistentNotificationSetting = 'Yzygiderli wagtlar paneli';
-  static const String offsetSetting               = 'Wagtlary sazlamak';
-  static const String offsetExplain               = 'Resmi kalendara görä minut goşup/aýryp bilersiňiz:';
+  static const String offsetSetting               = 'Wagtlary sazlamak (goşmaça)';
+  static const String offsetExplain               = 'Programmanyň wagtlary resmi senenama esasynda takyk. Diňe metjidiňiz başga wagt görkezýän bolsa, bu ýerden sazlap bilersiňiz.';
   static const String minutesSuffix               = 'minut';
   static const String aboutTitle                  = 'Biz Barada';
   static const String appVersion                  = 'Wersiýa 1.0.0';

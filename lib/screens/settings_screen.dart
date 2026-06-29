@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../providers/app_state.dart';
 import '../utils/email_launcher.dart';
 import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
 import '../services/version_service.dart';
+import '../services/notification_service.dart';
 import '../config/site_config.dart';
+import '../config/notification_sounds.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AppState appState;
@@ -19,26 +22,35 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
   final _msgCtrl = TextEditingController();
+  final AudioPlayer _previewPlayer = AudioPlayer();
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _emailCtrl.dispose();
     _msgCtrl.dispose();
+    _previewPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _previewSound(String soundId) async {
+    HapticFeedback.lightImpact();
+    try {
+      await _previewPlayer.stop();
+      await _previewPlayer.play(AssetSource('sounds/$soundId.wav'));
+    } catch (_) {
+      await NotificationService().previewAlertSound(soundId);
+    }
   }
 
   Future<void> _sendEmail() async {
     if (!_formKey.currentState!.validate()) return;
     final name = _nameCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
     final msg = _msgCtrl.text.trim();
 
     final launched = await EmailLauncher.open(
       subject: 'Gazojak Namaz Wagty — Goldaw',
-      body: 'Kimden: $name\nE-poçta: $email\n\n$msg',
+      body: 'Kimden: $name\n\n$msg',
     );
 
     if (!mounted) return;
@@ -52,7 +64,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
       _nameCtrl.clear();
-      _emailCtrl.clear();
       _msgCtrl.clear();
     } else {
       HapticFeedback.vibrate();
@@ -164,52 +175,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // Developer credit section (en aşakda)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.activePrayerGradient,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.code_rounded, color: Colors.white, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Dörediji',
-                              style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'Abdyrahman Döwletgulyýew',
-                              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Gazojak, Türkmenistan 🇹🇲',
-                              style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 const SizedBox(height: 20),
 
                 // Close button
@@ -311,101 +276,188 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       tt: tt,
                       tc: tc,
                       borderColor: borderColor,
-                      showDivider: false,
+                      showDivider: widget.appState.notificationSoundEnabled,
                     ),
+                    if (widget.appState.notificationSoundEnabled) ...[
+                      Divider(color: borderColor, height: 1),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bildiriş sesini saýlaň',
+                              style: tt.titleSmall?.copyWith(color: tc, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Synap görmek üçin ses düwmesine basyň',
+                              style: tt.bodySmall?.copyWith(color: sc),
+                            ),
+                            const SizedBox(height: 8),
+                            ...NotificationSounds.options.map((option) {
+                              final selected = widget.appState.notificationSoundId == option.id;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? AppColors.emeraldGreen.withValues(alpha: 0.1)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selected
+                                        ? AppColors.emeraldGreen.withValues(alpha: 0.4)
+                                        : borderColor,
+                                  ),
+                                ),
+                                child: ListTile(
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                  leading: Icon(
+                                    selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                    color: selected ? AppColors.emeraldGreen : sc,
+                                    size: 20,
+                                  ),
+                                  title: Text(
+                                    option.label,
+                                    style: tt.bodyMedium?.copyWith(
+                                      color: tc,
+                                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    option.description,
+                                    style: tt.bodySmall?.copyWith(color: sc, fontSize: 11),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.play_circle_outline_rounded),
+                                    color: AppColors.emeraldGreen,
+                                    onPressed: () => _previewSound(option.id),
+                                    tooltip: 'Synap gör',
+                                  ),
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    widget.appState.setNotificationSoundId(option.id);
+                                  },
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 25),
 
-              // Offset header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    TkTranslations.offsetSetting,
-                    style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      widget.appState.resetOffsets();
-                    },
-                    child: const Text('Reset', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(TkTranslations.offsetExplain, style: tt.bodySmall?.copyWith(color: sc)),
-              const SizedBox(height: 12),
-
-              // Offset list
+              // Prayer time offset — collapsed advanced section
               _card(
                 borderColor,
                 cardBg,
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: sortedKeys.length,
-                  separatorBuilder: (_, __) => Divider(color: borderColor, height: 1),
-                  itemBuilder: (_, i) {
-                    final key = sortedKeys[i];
-                    final cur = offsets[key] ?? 0;
-                    final name = TkTranslations.prayerNamesShort[key] ?? key;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: Text(name, style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.bold)),
-                          ),
-                          Expanded(
-                            flex: 4,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  onPressed: cur > -15
-                                      ? () {
-                                          HapticFeedback.lightImpact();
-                                          widget.appState.setOffset(key, cur - 1);
-                                        }
-                                      : null,
-                                  icon: const Icon(Icons.remove_circle_outline_rounded),
-                                  color: Colors.redAccent,
-                                ),
-                                SizedBox(
-                                  width: 44,
-                                  child: Text(
-                                    cur > 0 ? '+$cur m' : '$cur m',
-                                    style: tt.bodyMedium?.copyWith(
-                                      color: cur == 0
-                                          ? tc
-                                          : (cur > 0 ? AppColors.mintGreen : Colors.redAccent),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: cur < 15
-                                      ? () {
-                                          HapticFeedback.lightImpact();
-                                          widget.appState.setOffset(key, cur + 1);
-                                        }
-                                      : null,
-                                  icon: const Icon(Icons.add_circle_outline_rounded),
-                                  color: AppColors.mintGreen,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                child: Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.emeraldGreen.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
                       ),
-                    );
-                  },
+                      child: const Icon(Icons.tune_rounded, color: AppColors.emeraldGreen),
+                    ),
+                    title: Text(
+                      TkTranslations.offsetSetting,
+                      style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      TkTranslations.offsetExplain,
+                      style: tt.bodySmall?.copyWith(color: sc),
+                    ),
+                    iconColor: AppColors.emeraldGreen,
+                    collapsedIconColor: sc,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                HapticFeedback.mediumImpact();
+                                widget.appState.resetOffsets();
+                              },
+                              child: const Text('Reset', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ...sortedKeys.map((key) {
+                        final cur = offsets[key] ?? 0;
+                        final name = TkTranslations.prayerNamesShort[key] ?? key;
+                        return Column(
+                          children: [
+                            Divider(color: borderColor, height: 1),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Text(name, style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.bold)),
+                                  ),
+                                  Expanded(
+                                    flex: 4,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        IconButton(
+                                          onPressed: cur > -15
+                                              ? () {
+                                                  HapticFeedback.lightImpact();
+                                                  widget.appState.setOffset(key, cur - 1);
+                                                }
+                                              : null,
+                                          icon: const Icon(Icons.remove_circle_outline_rounded),
+                                          color: Colors.redAccent,
+                                        ),
+                                        SizedBox(
+                                          width: 44,
+                                          child: Text(
+                                            cur > 0 ? '+$cur m' : '$cur m',
+                                            style: tt.bodyMedium?.copyWith(
+                                              color: cur == 0
+                                                  ? tc
+                                                  : (cur > 0 ? AppColors.mintGreen : Colors.redAccent),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: cur < 15
+                                              ? () {
+                                                  HapticFeedback.lightImpact();
+                                                  widget.appState.setOffset(key, cur + 1);
+                                                }
+                                              : null,
+                                          icon: const Icon(Icons.add_circle_outline_rounded),
+                                          color: AppColors.mintGreen,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 25),
@@ -514,19 +566,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   _field(
-                                    _emailCtrl,
-                                    TkTranslations.supportEmailHint,
-                                    Icons.email_outlined,
-                                    isDark,
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (v) {
-                                      if (v!.isEmpty) return 'Gerekli';
-                                      if (!v.contains('@')) return 'Nädogry';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _field(
                                     _msgCtrl,
                                     TkTranslations.supportMessageHint,
                                     Icons.chat_bubble_outline_rounded,
@@ -562,7 +601,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 35),
 
-              // Softened & Normalized Credits Footer
+              // Footer
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
@@ -599,15 +638,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 8),
                     InkWell(
-                      onTap: () async {
-                        HapticFeedback.selectionClick();
-                        final uri = Uri.parse(SiteConfig.websiteUrl);
-                        try {
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          }
-                        } catch (_) {}
-                      },
+                      onTap: () => _openWebsite(),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         width: double.infinity,
@@ -656,6 +687,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openWebsite() async {
+    HapticFeedback.selectionClick();
+    final uri = Uri.parse(SiteConfig.websiteUrl);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sahypa açylmady. Internet baglanyşygyny barlaň.'),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+    }
   }
 
   Widget _card(Color border, Color bg, {required Widget child}) => Container(

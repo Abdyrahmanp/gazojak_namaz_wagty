@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:geolocator/geolocator.dart';
 import '../providers/app_state.dart';
 import '../utils/colors.dart';
+import '../utils/qibla_calculator.dart';
 import '../utils/tk_translations.dart';
 
 class CompassScreen extends StatefulWidget {
@@ -17,8 +19,78 @@ class CompassScreen extends StatefulWidget {
 }
 
 class _CompassScreenState extends State<CompassScreen> {
-  static const double qiblaAngle = 228.3; // Bearing of Makkah from Gazojak
+  final HeadingSmoother _headingSmoother = HeadingSmoother(alpha: 0.1);
   bool _hasVibrated = false;
+  double _qiblaBearing = calculateQiblaBearing(gazojakLatitude, gazojakLongitude);
+  String _locationLabel = 'Gazojak (deslapky)';
+  bool _usingGps = false;
+  bool _locationDenied = false;
+  bool _compassUnavailable = false;
+  Timer? _compassTimeout;
+
+  @override
+  void initState() {
+    super.initState();
+    _initLocation();
+    if (FlutterCompass.events == null) {
+      _compassUnavailable = true;
+    } else {
+      _compassTimeout = Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _compassUnavailable = true);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _compassTimeout?.cancel();
+    super.dispose();
+  }
+
+  void _onCompassDataReceived() {
+    if (_compassUnavailable) return;
+    _compassTimeout?.cancel();
+    _compassTimeout = null;
+  }
+
+  Future<void> _initLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) setState(() => _locationDenied = true);
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _locationDenied = true);
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 12),
+        ),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _qiblaBearing = calculateQiblaBearing(position.latitude, position.longitude);
+        _usingGps = true;
+        _locationLabel = 'GPS: ${position.latitude.toStringAsFixed(2)}°, ${position.longitude.toStringAsFixed(2)}°';
+        _locationDenied = false;
+      });
+      _headingSmoother.reset();
+    } catch (_) {
+      if (mounted) setState(() => _locationDenied = true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +110,6 @@ class _CompassScreenState extends State<CompassScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Screen Header
               Text(
                 TkTranslations.compassTitle,
                 style: textTheme.headlineMedium?.copyWith(
@@ -49,51 +120,62 @@ class _CompassScreenState extends State<CompassScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                TkTranslations.qiblaAngleText,
+                _locationLabel,
                 style: textTheme.bodySmall?.copyWith(color: subColor),
               ),
+              if (_locationDenied && !_usingGps) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Ýerleşiş rugsady berilmedi — Gazojak ugry ulanylýar',
+                  style: textTheme.bodySmall?.copyWith(color: Colors.orangeAccent),
+                ),
+              ],
               const SizedBox(height: 30),
 
-              // Sensor Compass logic via StreamBuilder with 1.5s timeout for offline robustness
-              StreamBuilder<CompassEvent>(
-                stream: FlutterCompass.events?.timeout(
-                  const Duration(milliseconds: 1500),
-                  onTimeout: (sink) {
-                    sink.addError(TimeoutException("No compass sensor response"));
-                  },
-                ),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return _buildNoSensorFallback(textTheme, textColor, subColor, cardBg, borderColor);
-                  }
+              if (_compassUnavailable || FlutterCompass.events == null)
+                _buildNoSensorFallback(textTheme, textColor, subColor, cardBg, borderColor)
+              else
+                StreamBuilder<CompassEvent>(
+                  stream: FlutterCompass.events,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return _buildNoSensorFallback(textTheme, textColor, subColor, cardBg, borderColor);
+                    }
 
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: AppColors.emeraldGreen),
-                    );
-                  }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              const CircularProgressIndicator(color: AppColors.emeraldGreen),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Kompas gözlenýär...',
+                                style: textTheme.bodySmall?.copyWith(color: subColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
 
-                  double? heading = snapshot.data?.heading;
+                    final rawHeading = snapshot.data?.heading;
+                    if (rawHeading == null) {
+                      return _buildNoSensorFallback(textTheme, textColor, subColor, cardBg, borderColor);
+                    }
 
-                  // If heading is null, it means no magnetometer sensor is detected
-                  if (heading == null) {
-                    return _buildNoSensorFallback(textTheme, textColor, subColor, cardBg, borderColor);
-                  }
+                    _onCompassDataReceived();
 
-                  // Heading is degrees clockwise from North.
-                  // Qibla is 228.3 degrees clockwise from North.
-                  // Compass Dial should rotate by -heading so North is at top.
-                  // Qibla Needle should rotate by (qiblaAngle - heading).
-                  double headingRad = heading * (math.pi / 180.0);
-                  double qiblaRad = (qiblaAngle - heading) * (math.pi / 180.0);
+                  final heading = _headingSmoother.smooth(rawHeading);
+                  final headingRad = heading * math.pi / 180.0;
+                  final needleRad = (_qiblaBearing - heading) * math.pi / 180.0;
 
-                  // Calculate difference in degrees (normalized to -180 to 180)
-                  double diff = (qiblaAngle - heading).remainder(360);
+                  var diff = (_qiblaBearing - heading).remainder(360);
                   if (diff > 180) diff -= 360;
                   if (diff < -180) diff += 360;
-                  bool isAligned = diff.abs() <= 4.0;
+                  final isAligned = diff.abs() <= 5.0;
 
-                  // Trigger vibration once when entering alignment range
                   if (isAligned) {
                     if (!_hasVibrated) {
                       HapticFeedback.mediumImpact();
@@ -105,26 +187,23 @@ class _CompassScreenState extends State<CompassScreen> {
 
                   return Column(
                     children: [
-                      // Compass Frame Stack
                       Center(
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
+                          duration: const Duration(milliseconds: 200),
                           width: 280,
                           height: 280,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: cardBg,
                             border: Border.all(
-                              color: isAligned 
-                                  ? AppColors.mintGreen 
-                                  : borderColor,
+                              color: isAligned ? AppColors.mintGreen : borderColor,
                               width: isAligned ? 3.0 : 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: isAligned
-                                    ? AppColors.mintGreen.withOpacity(0.3)
-                                    : Colors.black.withOpacity(0.1),
+                                    ? AppColors.mintGreen.withValues(alpha: 0.3)
+                                    : Colors.black.withValues(alpha: 0.1),
                                 blurRadius: isAligned ? 25 : 10,
                                 spreadRadius: isAligned ? 4 : 0,
                               ),
@@ -133,19 +212,14 @@ class _CompassScreenState extends State<CompassScreen> {
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              // 1. Rotating Compass Card (North/South/East/West markings)
                               Transform.rotate(
                                 angle: -headingRad,
                                 child: _buildCompassCard(isDark),
                               ),
-
-                              // 2. Rotating Qibla Needle
                               Transform.rotate(
-                                angle: qiblaRad,
+                                angle: needleRad,
                                 child: _buildQiblaNeedle(),
                               ),
-
-                              // 3. Central Cap
                               Container(
                                 width: 20,
                                 height: 20,
@@ -155,7 +229,7 @@ class _CompassScreenState extends State<CompassScreen> {
                                   border: Border.all(color: Colors.white, width: 2),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
+                                      color: Colors.black.withValues(alpha: 0.2),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     ),
@@ -168,39 +242,31 @@ class _CompassScreenState extends State<CompassScreen> {
                       ),
                       const SizedBox(height: 35),
 
-                      // Status Information
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                         decoration: BoxDecoration(
-                          color: isAligned 
-                              ? AppColors.emeraldGreen.withOpacity(0.15) 
+                          color: isAligned
+                              ? AppColors.emeraldGreen.withValues(alpha: 0.15)
                               : cardBg,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isAligned ? AppColors.mintGreen : borderColor,
                           ),
                         ),
-                        child: Column(
-                          children: [
-                            Text(
-                              isAligned ? TkTranslations.qiblaAligned : "${TkTranslations.qiblaAngleText}°",
-                              style: textTheme.titleMedium?.copyWith(
-                                color: isAligned ? AppColors.mintGreen : textColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              TkTranslations.qiblaDirectionText,
-                              style: textTheme.bodyMedium?.copyWith(color: subColor),
-                            ),
-                          ],
+                        child: Text(
+                          isAligned
+                              ? TkTranslations.qiblaAligned
+                              : 'Kybla ugry: ${diff.abs().toStringAsFixed(0)}° ${diff > 0 ? 'saga' : 'çepe'} öwrüň',
+                          textAlign: TextAlign.center,
+                          style: textTheme.titleMedium?.copyWith(
+                            color: isAligned ? AppColors.mintGreen : textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
-                      // Calibrate Tip
+
                       Row(
                         children: [
                           const Icon(Icons.info_outline_rounded, color: AppColors.emeraldGreen, size: 20),
@@ -233,22 +299,23 @@ class _CompassScreenState extends State<CompassScreen> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Inner circular border
           Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: color, width: 1),
             ),
           ),
-          // Tick lines representing directions
           ...List.generate(72, (index) {
             final angle = index * 5 * math.pi / 180;
-            final isCardinal = index % 18 == 0; // 0, 90, 180, 270 deg
+            final isCardinal = index % 18 == 0;
             final isSubCardinal = index % 9 == 0 && !isCardinal;
-            
+
             double length = 8;
-            if (isCardinal) length = 16;
-            else if (isSubCardinal) length = 12;
+            if (isCardinal) {
+              length = 16;
+            } else if (isSubCardinal) {
+              length = 12;
+            }
 
             return Transform.rotate(
               angle: angle,
@@ -257,19 +324,18 @@ class _CompassScreenState extends State<CompassScreen> {
                 child: Container(
                   width: isCardinal ? 2 : 1,
                   height: length,
-                  color: isCardinal 
-                      ? AppColors.emeraldGreen 
-                      : (isSubCardinal ? labelColor.withOpacity(0.5) : color),
+                  color: isCardinal
+                      ? AppColors.emeraldGreen
+                      : (isSubCardinal ? labelColor.withValues(alpha: 0.5) : color),
                 ),
               ),
             );
           }),
-          // Direction letters
-          Align(
+          const Align(
             alignment: Alignment.topCenter,
             child: Padding(
-              padding: const EdgeInsets.only(top: 18),
-              child: const Text(
+              padding: EdgeInsets.only(top: 18),
+              child: Text(
                 'N',
                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
               ),
@@ -314,37 +380,19 @@ class _CompassScreenState extends State<CompassScreen> {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // The Needle Pointer (an elegant arrow pointing to Makkah)
         Align(
           alignment: Alignment.topCenter,
           child: Container(
             margin: const EdgeInsets.only(top: 30),
-            child: Column(
+            child: const Column(
               children: [
-                // Arrow tip
-                const Icon(
-                  Icons.location_on,
-                  color: AppColors.amberGlow,
-                  size: 32,
-                ),
-                // Kaaba Icon or Marker
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.black,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.mosque,
-                    color: Colors.white,
-                    size: 14,
-                  ),
-                ),
+                Icon(Icons.location_on, color: AppColors.amberGlow, size: 32),
+                SizedBox(height: 2),
+                Icon(Icons.mosque, color: AppColors.amberGlow, size: 18),
               ],
             ),
           ),
         ),
-        // Connecting line
         Container(
           width: 4,
           height: 120,
@@ -352,7 +400,7 @@ class _CompassScreenState extends State<CompassScreen> {
             gradient: LinearGradient(
               colors: [
                 AppColors.amberGlow,
-                AppColors.amberGlow.withOpacity(0.0),
+                AppColors.amberGlow.withValues(alpha: 0.0),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -372,7 +420,6 @@ class _CompassScreenState extends State<CompassScreen> {
   ) {
     return Column(
       children: [
-        // Static Graphic representing target direction
         Center(
           child: Container(
             width: 220,
@@ -388,12 +435,12 @@ class _CompassScreenState extends State<CompassScreen> {
                 const Align(
                   alignment: Alignment.topCenter,
                   child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Text('N (Demirgazyk)', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                    padding: EdgeInsets.all(12),
+                    child: Text('N', style: TextStyle(color: Colors.grey, fontSize: 14)),
                   ),
                 ),
                 Transform.rotate(
-                  angle: qiblaAngle * math.pi / 180,
+                  angle: _qiblaBearing * math.pi / 180,
                   child: const Align(
                     alignment: Alignment.topCenter,
                     child: Column(
@@ -412,8 +459,6 @@ class _CompassScreenState extends State<CompassScreen> {
           ),
         ),
         const SizedBox(height: 30),
-
-        // Information box explaining qibla direction
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
@@ -445,28 +490,7 @@ class _CompassScreenState extends State<CompassScreen> {
                 TkTranslations.compassWarning,
                 style: textTheme.bodyMedium?.copyWith(color: subColor),
               ),
-              const SizedBox(height: 16),
-              _buildBulletPoint("${TkTranslations.qiblaAngleText}°", textTheme, textColor),
-              const SizedBox(height: 8),
-              _buildBulletPoint(TkTranslations.qiblaDirectionText, textTheme, textColor),
-              const SizedBox(height: 8),
-              _buildBulletPoint("Ýerleşiş: Demirgazyga garanyňyzda çep egnik tarapyňyzda 228.3° burçda durýar (Günbatardan azajyk günorta tarap).", textTheme, textColor),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBulletPoint(String text, TextTheme textTheme, Color color) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("• ", style: TextStyle(color: AppColors.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 16)),
-        Expanded(
-          child: Text(
-            text,
-            style: textTheme.bodyMedium?.copyWith(color: color),
           ),
         ),
       ],

@@ -255,6 +255,15 @@ class _FaqScreenState extends State<FaqScreen> {
     }
   }
 
+  String _getIconNameForItem(FaqItem item) {
+    for (final category in _categories) {
+      if (category.items.contains(item)) {
+        return category.icon;
+      }
+    }
+    return '';
+  }
+
   String normalizeTurkmenText(String text) {
     return text.toLowerCase()
         .replaceAll('ä', 'a')
@@ -742,6 +751,7 @@ class _FaqScreenState extends State<FaqScreen> {
                                     final allDbItems = _categories.expand((cat) => cat.items).toList();
                                     return FaqItemCard(
                                       item: filteredItems[index],
+                                      categoryIcon: _getCategoryIcon(_getIconNameForItem(filteredItems[index])),
                                       isDark: isDark,
                                       allItems: allDbItems,
                                       appState: widget.appState,
@@ -760,6 +770,7 @@ class _FaqScreenState extends State<FaqScreen> {
 
 class FaqItemCard extends StatelessWidget {
   final FaqItem item;
+  final IconData categoryIcon;
   final bool isDark;
   final List<FaqItem> allItems;
   final AppState appState;
@@ -767,6 +778,7 @@ class FaqItemCard extends StatelessWidget {
   const FaqItemCard({
     super.key,
     required this.item,
+    required this.categoryIcon,
     required this.isDark,
     required this.allItems,
     required this.appState,
@@ -823,8 +835,8 @@ class FaqItemCard extends StatelessWidget {
                     color: AppColors.emeraldGreen.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.menu_book_rounded,
+                  child: Icon(
+                    categoryIcon,
                     color: AppColors.emeraldGreen,
                     size: 18,
                   ),
