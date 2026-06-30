@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
-import '../config/notification_sounds.dart';
 import '../models/prayer_time.dart';
 import '../services/prayer_time_service.dart';
 import '../utils/tk_translations.dart';
@@ -15,10 +15,11 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
-  String _activeSoundId = NotificationSounds.defaultSoundId;
 
   static const int persistentNotificationId = 8888;
   static const int alertBaseId = 1000;
+  static const int panelRefreshBaseId = 8900;
+  static const Color _panelAccent = Color(0xFF2E7D32);
 
   static bool get _isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -26,10 +27,19 @@ class NotificationService {
   static const _persistentChannel = AndroidNotificationChannel(
     'persistent_prayer_times',
     'Yzygiderli wagtlar paneli',
-    description: 'Namaz wagtlayny we galan wagty görkezýän panel',
+    description: 'Namaz wagtlary we galan wagty görkezýär',
     importance: Importance.low,
     playSound: false,
     enableVibration: false,
+  );
+
+  static const _alertChannel = AndroidNotificationChannel(
+    'prayer_alerts',
+    'Namaz wagty habarlandyryşy',
+    description: 'Namaz wagty gelende bildiriş iberýär',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
   );
 
   Future<void> initialize() async {
@@ -57,34 +67,13 @@ class NotificationService {
           AndroidFlutterLocalNotificationsPlugin>();
       if (android != null) {
         await android.createNotificationChannel(_persistentChannel);
-        await _ensureAlertChannel(android, _activeSoundId);
+        await android.createNotificationChannel(_alertChannel);
       }
 
       _isInitialized = true;
     } catch (e) {
       debugPrint('NotificationService init error: $e');
     }
-  }
-
-  String _channelIdForSound(String soundId) => 'prayer_alerts_$soundId';
-
-  AndroidNotificationChannel _alertChannelFor(String soundId) =>
-      AndroidNotificationChannel(
-        _channelIdForSound(soundId),
-        'Namaz wagty habarlandyryşy',
-        description: 'Namaz wagty gelende bildiriş iberýär',
-        importance: Importance.max,
-        playSound: true,
-        sound: RawResourceAndroidNotificationSound(soundId),
-        enableVibration: true,
-      );
-
-  Future<void> _ensureAlertChannel(
-    AndroidFlutterLocalNotificationsPlugin android,
-    String soundId,
-  ) async {
-    await android.createNotificationChannel(_alertChannelFor(soundId));
-    _activeSoundId = soundId;
   }
 
   Future<bool> requestPermissions() async {
@@ -118,20 +107,59 @@ class NotificationService {
     }
   }
 
-  String _formatPrayerLine(
-    String key,
-    String time,
+  String _buildPanelBody(
+    PrayerTime dailyTimes,
+    Map<String, int> offsets,
     String activeKey,
-    String nextKey,
   ) {
-    final name = (TkTranslations.prayerNamesShort[key] ?? key).padRight(6);
-    final marker = key == activeKey ? ' ◆' : (key == nextKey ? ' ▶' : '  ');
-    return '$name $time$marker';
+    const keys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
+    final lines = <String>[];
+    for (final key in keys) {
+      final raw = dailyTimes.getTimeByKey(key);
+      final time = _adj(key, raw, offsets);
+      final name = TkTranslations.prayerNamesShort[key] ?? key;
+      if (key == activeKey) {
+        lines.add('● $name   $time');
+      } else {
+        lines.add('   $name   $time');
+      }
+    }
+    return lines.join('\n');
+  }
+
+  AndroidNotificationDetails _persistentDetails({
+    required String nextPrayerName,
+    required DateTime nextPrayerDateTime,
+    required String body,
+  }) {
+    return AndroidNotificationDetails(
+      'persistent_prayer_times',
+      'Yzygiderli wagtlar paneli',
+      channelDescription: 'Namaz wagtlary we galan wagty görkezýär',
+      importance: Importance.low,
+      priority: Priority.low,
+      ongoing: true,
+      autoCancel: false,
+      silent: true,
+      showWhen: true,
+      when: nextPrayerDateTime.millisecondsSinceEpoch,
+      usesChronometer: true,
+      chronometerCountDown: true,
+      icon: '@mipmap/ic_launcher',
+      color: _panelAccent,
+      colorized: true,
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: '$nextPrayerName namazyna',
+        summaryText: 'Gazojak · Namaz wagtlary',
+        htmlFormatBigText: false,
+      ),
+    );
   }
 
   Future<void> showPersistentNotification({
     required String nextPrayerKey,
-    required String remainingTime,
+    required DateTime nextPrayerDateTime,
     required PrayerTime dailyTimes,
     required Map<String, int> offsets,
     required String activePrayerKey,
@@ -141,42 +169,20 @@ class NotificationService {
 
     final nextPrayerName =
         TkTranslations.prayerNamesShort[nextPrayerKey] ?? nextPrayerKey;
-
-    const keys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
-
-    final lines = <String>[];
-    for (final key in keys) {
-      final raw = dailyTimes.getTimeByKey(key);
-      final time = _adj(key, raw, offsets);
-      lines.add(_formatPrayerLine(key, time, activePrayerKey, nextPrayerKey));
-    }
-
-    final body = lines.join('\n');
-
-    final androidDetails = AndroidNotificationDetails(
-      'persistent_prayer_times',
-      'Yzygiderli wagtlar paneli',
-      channelDescription: 'Namaz wagtlayny we galan wagty görkezýän panel',
-      importance: Importance.low,
-      priority: Priority.low,
-      ongoing: true,
-      autoCancel: false,
-      silent: true,
-      showWhen: false,
-      icon: '@mipmap/ic_launcher',
-      styleInformation: BigTextStyleInformation(
-        body,
-        contentTitle: '$nextPrayerName namazyna — $remainingTime galdy',
-        summaryText: 'Gazojak namaz wagtlary',
-      ),
-    );
+    final body = _buildPanelBody(dailyTimes, offsets, activePrayerKey);
 
     try {
       await _plugin.show(
         id: persistentNotificationId,
-        title: '$nextPrayerName namazyna — $remainingTime galdy',
+        title: '$nextPrayerName namazyna',
         body: body,
-        notificationDetails: NotificationDetails(android: androidDetails),
+        notificationDetails: NotificationDetails(
+          android: _persistentDetails(
+            nextPrayerName: nextPrayerName,
+            nextPrayerDateTime: nextPrayerDateTime,
+            body: body,
+          ),
+        ),
       );
     } catch (e) {
       debugPrint('showPersistentNotification error: $e');
@@ -191,39 +197,37 @@ class NotificationService {
     } catch (e) {
       debugPrint('cancelPersistentNotification error: $e');
     }
+    await _cancelPanelRefreshes();
   }
 
-  AndroidNotificationDetails _alertDetails(bool playSound, String soundId) =>
+  AndroidNotificationDetails _alertDetails(bool playSound) =>
       AndroidNotificationDetails(
-        _channelIdForSound(soundId),
+        'prayer_alerts',
         'Namaz wagty habarlandyryşy',
         channelDescription: 'Namaz wagty gelende bildiriş iberýär',
         importance:
             playSound ? Importance.max : Importance.defaultImportance,
         priority: playSound ? Priority.high : Priority.defaultPriority,
         playSound: playSound,
-        sound: playSound ? RawResourceAndroidNotificationSound(soundId) : null,
         enableVibration: true,
         icon: '@mipmap/ic_launcher',
+        color: _panelAccent,
       );
 
   Future<void> schedulePrayerNotifications({
     required PrayerTimeService prayerService,
     required Map<String, int> offsets,
     required bool soundEnabled,
-    required String soundId,
+    required bool persistentPanelEnabled,
   }) async {
     if (!_isAndroid) return;
     if (!_isInitialized) await initialize();
     if (!prayerService.isLoaded) return;
 
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null && soundId != _activeSoundId) {
-      await _ensureAlertChannel(android, soundId);
-    }
-
     await _cancelScheduledAlerts();
+    if (persistentPanelEnabled) {
+      await _scheduleNextPanelRefresh(prayerService, offsets);
+    }
 
     final now = DateTime.now();
     final dates = [now, now.add(const Duration(days: 1))];
@@ -249,9 +253,8 @@ class NotificationService {
             body:
                 'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.',
             scheduledDate: tzTime,
-            notificationDetails: NotificationDetails(
-              android: _alertDetails(soundEnabled, soundId),
-            ),
+            notificationDetails:
+                NotificationDetails(android: _alertDetails(soundEnabled)),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );
         } catch (e) {
@@ -261,30 +264,62 @@ class NotificationService {
     }
   }
 
-  Future<void> previewAlertSound(String soundId) async {
-    if (!_isAndroid) return;
-    if (!_isInitialized) await initialize();
+  /// Indiki namaz wagtynda paneli täzele (programma ýapyk bolsa hem).
+  Future<void> _scheduleNextPanelRefresh(
+    PrayerTimeService prayerService,
+    Map<String, int> offsets,
+  ) async {
+    await _cancelPanelRefreshes();
 
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      await _ensureAlertChannel(android, soundId);
+    final now = DateTime.now();
+    DateTime? nearest;
+    DateTime? nearestDay;
+
+    for (final dayOffset in [0, 1]) {
+      final date = now.add(Duration(days: dayOffset));
+      final dayDate = DateTime(date.year, date.month, date.day);
+      for (final t in prayerService.getAdjustedDateTimes(date, offsets).values) {
+        if (t.isAfter(now) && (nearest == null || t.isBefore(nearest))) {
+          nearest = t;
+          nearestDay = dayDate;
+        }
+      }
     }
 
+    if (nearest == null || nearestDay == null) return;
+
+    final atTime = nearest;
+    final dailyTimes = prayerService.getTimesForDate(nearestDay);
+    final activeKey = prayerService.getActivePrayerKey(atTime, offsets);
+    final nextInfo = prayerService.getNextPrayerInfo(atTime, offsets);
+    final nextKey = nextInfo['key'] as String;
+    final nextDt = nextInfo['dateTime'] as DateTime;
+    final nextName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
+    final body = _buildPanelBody(dailyTimes, offsets, activeKey);
+
     try {
-      await _plugin.show(
-        id: 7777,
-        title: 'Ses synagy',
-        body: NotificationSounds.optionById(soundId).label,
+      await _plugin.zonedSchedule(
+        id: persistentNotificationId,
+        title: '$nextName namazyna',
+        body: body,
+        scheduledDate: tz.TZDateTime.from(atTime, tz.local),
         notificationDetails: NotificationDetails(
-          android: _alertDetails(true, soundId),
+          android: _persistentDetails(
+            nextPrayerName: nextName,
+            nextPrayerDateTime: nextDt,
+            body: body,
+          ),
         ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
-      Future.delayed(const Duration(seconds: 2), () {
-        _plugin.cancel(id: 7777);
-      });
     } catch (e) {
-      debugPrint('previewAlertSound error: $e');
+      debugPrint('panel refresh schedule error: $e');
+    }
+  }
+
+  Future<void> _cancelPanelRefreshes() async {
+    for (var id = panelRefreshBaseId; id < panelRefreshBaseId + 20; id++) {
+      await _plugin.cancel(id: id);
     }
   }
 

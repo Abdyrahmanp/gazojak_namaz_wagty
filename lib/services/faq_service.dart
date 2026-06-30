@@ -92,7 +92,7 @@ class FaqService {
     if (stored == null) return defaultRemoteUrl;
     if (stored.contains('githubusercontent.com') ||
         stored.contains('github.com') ||
-        stored.contains('gazojak_namaz_wagty.byethost')) {
+        stored.contains('gazojaknamazwagt.byethost3.com')) {
       await prefs.setString(_remoteUrlKey, defaultRemoteUrl);
       return defaultRemoteUrl;
     }

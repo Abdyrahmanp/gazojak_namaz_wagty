@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../providers/app_state.dart';
 import '../utils/email_launcher.dart';
 import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
 import '../services/version_service.dart';
-import '../services/notification_service.dart';
 import '../config/site_config.dart';
-import '../config/notification_sounds.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AppState appState;
@@ -23,24 +20,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _msgCtrl = TextEditingController();
-  final AudioPlayer _previewPlayer = AudioPlayer();
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _msgCtrl.dispose();
-    _previewPlayer.dispose();
     super.dispose();
-  }
-
-  Future<void> _previewSound(String soundId) async {
-    HapticFeedback.lightImpact();
-    try {
-      await _previewPlayer.stop();
-      await _previewPlayer.play(AssetSource('sounds/$soundId.wav'));
-    } catch (_) {
-      await NotificationService().previewAlertSound(soundId);
-    }
   }
 
   Future<void> _sendEmail() async {
@@ -276,76 +261,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       tt: tt,
                       tc: tc,
                       borderColor: borderColor,
-                      showDivider: widget.appState.notificationSoundEnabled,
+                      showDivider: false,
                     ),
-                    if (widget.appState.notificationSoundEnabled) ...[
-                      Divider(color: borderColor, height: 1),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Bildiriş sesini saýlaň',
-                              style: tt.titleSmall?.copyWith(color: tc, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Synap görmek üçin ses düwmesine basyň',
-                              style: tt.bodySmall?.copyWith(color: sc),
-                            ),
-                            const SizedBox(height: 8),
-                            ...NotificationSounds.options.map((option) {
-                              final selected = widget.appState.notificationSoundId == option.id;
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 6),
-                                decoration: BoxDecoration(
-                                  color: selected
-                                      ? AppColors.emeraldGreen.withValues(alpha: 0.1)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: selected
-                                        ? AppColors.emeraldGreen.withValues(alpha: 0.4)
-                                        : borderColor,
-                                  ),
-                                ),
-                                child: ListTile(
-                                  dense: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                                  leading: Icon(
-                                    selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                                    color: selected ? AppColors.emeraldGreen : sc,
-                                    size: 20,
-                                  ),
-                                  title: Text(
-                                    option.label,
-                                    style: tt.bodyMedium?.copyWith(
-                                      color: tc,
-                                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    option.description,
-                                    style: tt.bodySmall?.copyWith(color: sc, fontSize: 11),
-                                  ),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.play_circle_outline_rounded),
-                                    color: AppColors.emeraldGreen,
-                                    onPressed: () => _previewSound(option.id),
-                                    tooltip: 'Synap gör',
-                                  ),
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    widget.appState.setNotificationSoundId(option.id);
-                                  },
-                                ),
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),

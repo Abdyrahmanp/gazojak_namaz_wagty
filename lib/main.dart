@@ -8,15 +8,11 @@ import 'utils/colors.dart';
 import 'utils/tk_translations.dart';
 
 void main() {
-  // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Set preferred orientations (portrait only for premium feel)
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
   runApp(const MyApp());
 }
 
@@ -29,14 +25,13 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final AppState _appState = AppState();
-  bool _isLoading = true;
   bool _permissionRequested = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeApp();
+    _appState.initialize();
   }
 
   @override
@@ -52,13 +47,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _initializeApp() async {
-    await _appState.initialize();
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
   Future<void> _requestNotificationPermission(BuildContext context) async {
     if (_permissionRequested) return;
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
@@ -72,7 +60,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           title: const Text('Bildiriş rugsady'),
           content: const Text(
             'Namaz wagty habarlandyryşlary we yzygiderli wagtlar paneli işlemegi üçin '
-            'bildiriş rugsadyny bermegiňizi haýyş edýäris. Sazlamalar bölüminden hem açyp bilersiňiz.',
+            'bildiriş rugsadyny bermegiňizi haýyş edýäris.',
           ),
           actions: [
             TextButton(
@@ -87,48 +75,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // Set status bar colors to transparent for full bleed screen design
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
       systemNavigationBarColor: Colors.transparent,
     ));
-
-    if (_isLoading) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData.dark().copyWith(
-          scaffoldBackgroundColor: AppColors.darkBg,
-        ),
-        home: const Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.mosque_rounded,
-                  color: AppColors.emeraldGreen,
-                  size: 64,
-                ),
-                SizedBox(height: 24),
-                CircularProgressIndicator(
-                  color: AppColors.emeraldGreen,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  "Gazojak Namaz Wagty",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
 
     return ListenableBuilder(
       listenable: _appState,
@@ -139,8 +90,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           title: TkTranslations.appTitle,
           debugShowCheckedModeBanner: false,
           themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-          
-          // Premium Dark Theme
           darkTheme: ThemeData(
             useMaterial3: true,
             brightness: Brightness.dark,
@@ -152,31 +101,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               surface: AppColors.darkCardBg,
               onPrimary: Colors.white,
             ),
-            switchTheme: SwitchThemeData(
-              thumbColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppColors.emeraldGreen;
-                }
-                return null;
-              }),
-              trackColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppColors.emeraldGreen.withOpacity(0.5);
-                }
-                return null;
-              }),
-            ),
             textTheme: const TextTheme(
-              headlineMedium: TextStyle(fontFamily: 'Inter', fontSize: 28, fontWeight: FontWeight.bold),
-              titleLarge: TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.bold),
-              titleMedium: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600),
-              bodyLarge: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              bodyMedium: TextStyle(fontFamily: 'Inter', fontSize: 14),
-              bodySmall: TextStyle(fontFamily: 'Inter', fontSize: 12),
+              headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              bodyLarge: TextStyle(fontSize: 16),
+              bodyMedium: TextStyle(fontSize: 14),
+              bodySmall: TextStyle(fontSize: 12),
             ),
           ),
-          
-          // Premium Light Theme
           theme: ThemeData(
             useMaterial3: true,
             brightness: Brightness.light,
@@ -188,30 +121,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               surface: AppColors.lightCardBg,
               onPrimary: Colors.white,
             ),
-            switchTheme: SwitchThemeData(
-              thumbColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppColors.emeraldGreen;
-                }
-                return null;
-              }),
-              trackColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppColors.emeraldGreen.withOpacity(0.5);
-                }
-                return null;
-              }),
-            ),
             textTheme: const TextTheme(
-              headlineMedium: TextStyle(fontFamily: 'Inter', fontSize: 28, fontWeight: FontWeight.bold),
-              titleLarge: TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.bold),
-              titleMedium: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600),
-              bodyLarge: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              bodyMedium: TextStyle(fontFamily: 'Inter', fontSize: 14),
-              bodySmall: TextStyle(fontFamily: 'Inter', fontSize: 12),
+              headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              bodyLarge: TextStyle(fontSize: 16),
+              bodyMedium: TextStyle(fontSize: 14),
+              bodySmall: TextStyle(fontSize: 12),
             ),
           ),
-          
           home: Builder(
             builder: (context) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
