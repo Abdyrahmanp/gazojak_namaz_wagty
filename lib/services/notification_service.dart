@@ -18,7 +18,7 @@ class NotificationService {
 
   static const int persistentNotificationId = 8888;
   static const int alertBaseId = 1000;
-  static const int panelRefreshBaseId = 8900;
+  static const String _panelTag = 'gazojak_prayer_panel';
   static const Color _panelAccent = Color(0xFF2E7D32);
   static const String _greenHtml = '#43A047';
 
@@ -54,7 +54,7 @@ class NotificationService {
     }
 
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
     const InitializationSettings initSettings =
         InitializationSettings(android: androidSettings);
 
@@ -119,23 +119,23 @@ class NotificationService {
       final raw = dailyTimes.getTimeByKey(key);
       final time = _adj(key, raw, offsets);
       final name = TkTranslations.prayerNamesShort[key] ?? key;
-      final padded = name.padRight(8);
+      final line = '$name: $time';
       if (key == activeKey) {
         lines.add(
-          '<font color="$_greenHtml"><b>$padded $time</b></font>',
+          '<font color="$_greenHtml"><b>$line (şu wagt)</b></font>',
         );
       } else {
-        lines.add('$padded $time');
+        lines.add(line);
       }
     }
     return lines.join('<br/>');
   }
 
-  String _panelTitle(String nextPrayerName, String remainingTime) =>
-      '$nextPrayerName namazyna $remainingTime galdy';
+  String _panelTitle(String nextPrayerName) => '$nextPrayerName namazyna galdy';
 
   AndroidNotificationDetails _persistentDetails({
     required String bodyHtml,
+    required int whenMs,
   }) {
     return AndroidNotificationDetails(
       'persistent_prayer_times',
@@ -146,20 +146,27 @@ class NotificationService {
       ongoing: true,
       autoCancel: false,
       silent: true,
-      showWhen: false,
-      icon: '@mipmap/ic_launcher',
+      onlyAlertOnce: true,
+      showWhen: true,
+      when: whenMs,
+      usesChronometer: true,
+      chronometerCountDown: true,
+      icon: '@drawable/ic_notification',
+      largeIcon: const DrawableResourceAndroidBitmap(
+        '@drawable/ic_notification_large',
+      ),
       color: _panelAccent,
-      colorized: true,
+      tag: _panelTag,
       styleInformation: BigTextStyleInformation(
         bodyHtml,
         htmlFormatBigText: true,
+        contentTitle: null,
       ),
     );
   }
 
   Future<void> showPersistentNotification({
     required String nextPrayerKey,
-    required String remainingTime,
     required DateTime nextPrayerDateTime,
     required PrayerTime dailyTimes,
     required Map<String, int> offsets,
@@ -170,16 +177,17 @@ class NotificationService {
 
     final nextPrayerName =
         TkTranslations.prayerNamesShort[nextPrayerKey] ?? nextPrayerKey;
-    final title = _panelTitle(nextPrayerName, remainingTime);
+    final title = _panelTitle(nextPrayerName);
     final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activePrayerKey);
+    final whenMs = nextPrayerDateTime.millisecondsSinceEpoch;
 
     try {
       await _plugin.show(
         id: persistentNotificationId,
         title: title,
-        body: bodyHtml.replaceAll(RegExp(r'<[^>]*>'), ''),
+        body: '',
         notificationDetails: NotificationDetails(
-          android: _persistentDetails(bodyHtml: bodyHtml),
+          android: _persistentDetails(bodyHtml: bodyHtml, whenMs: whenMs),
         ),
       );
     } catch (e) {
@@ -191,14 +199,14 @@ class NotificationService {
     if (!_isAndroid) return;
     if (!_isInitialized) await initialize();
     try {
-      await _plugin.cancel(id: persistentNotificationId);
+      await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
     } catch (e) {
       debugPrint('cancelPersistentNotification error: $e');
     }
     await _cancelPanelRefreshes();
   }
 
-  AndroidNotificationDetails _alertDetails(bool playSound) =>
+  AndroidNotificationDetails _alertDetails(bool playSound, String prayerName) =>
       AndroidNotificationDetails(
         'prayer_alerts',
         'Namaz wagty habarlandyryşy',
@@ -208,8 +216,15 @@ class NotificationService {
         priority: playSound ? Priority.high : Priority.defaultPriority,
         playSound: playSound,
         enableVibration: true,
-        icon: '@mipmap/ic_launcher',
+        icon: '@drawable/ic_notification',
         color: _panelAccent,
+        styleInformation: BigTextStyleInformation(
+          'Gazojak şäherinde $prayerName wagty girdi. '
+          'Namazyňyzy berjaý etmegi unutmaň.',
+          contentTitle: '<b>$prayerName namazy boldy</b>',
+          htmlFormatBigText: true,
+          htmlFormatContentTitle: true,
+        ),
       );
 
   Future<void> schedulePrayerNotifications({
@@ -224,7 +239,7 @@ class NotificationService {
 
     await _cancelScheduledAlerts();
     if (persistentPanelEnabled) {
-      await _scheduleNextPanelRefresh(prayerService, offsets);
+      await _schedulePanelRefreshes(prayerService, offsets);
     }
 
     final now = DateTime.now();
@@ -247,12 +262,13 @@ class NotificationService {
         try {
           await _plugin.zonedSchedule(
             id: id,
-            title: 'Namaz Wagty Boldy',
+            title: '$prayerName namazy boldy',
             body:
                 'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.',
             scheduledDate: tzTime,
-            notificationDetails:
-                NotificationDetails(android: _alertDetails(soundEnabled)),
+            notificationDetails: NotificationDetails(
+              android: _alertDetails(soundEnabled, prayerName),
+            ),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );
         } catch (e) {
@@ -262,7 +278,7 @@ class NotificationService {
     }
   }
 
-  Future<void> _scheduleNextPanelRefresh(
+  Future<void> _schedulePanelRefreshes(
     PrayerTimeService prayerService,
     Map<String, int> offsets,
   ) async {
@@ -272,7 +288,7 @@ class NotificationService {
     DateTime? nearest;
     DateTime? nearestDay;
 
-    for (final dayOffset in [0, 1]) {
+    for (final dayOffset in [0, 1, 2]) {
       final date = now.add(Duration(days: dayOffset));
       final dayDate = DateTime(date.year, date.month, date.day);
       for (final t in prayerService.getAdjustedDateTimes(date, offsets).values) {
@@ -292,23 +308,18 @@ class NotificationService {
     final nextKey = nextInfo['key'] as String;
     final nextDt = nextInfo['dateTime'] as DateTime;
     final nextName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
-    final diff = nextDt.difference(atTime);
-    final h = diff.inHours;
-    final m = diff.inMinutes.remainder(60);
-    final s = diff.inSeconds.remainder(60);
-    final remaining =
-        '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-    final title = _panelTitle(nextName, remaining);
+    final title = _panelTitle(nextName);
     final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activeKey);
+    final whenMs = nextDt.millisecondsSinceEpoch;
 
     try {
       await _plugin.zonedSchedule(
         id: persistentNotificationId,
         title: title,
-        body: bodyHtml.replaceAll(RegExp(r'<[^>]*>'), ''),
+        body: '',
         scheduledDate: tz.TZDateTime.from(atTime, tz.local),
         notificationDetails: NotificationDetails(
-          android: _persistentDetails(bodyHtml: bodyHtml),
+          android: _persistentDetails(bodyHtml: bodyHtml, whenMs: whenMs),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
@@ -318,9 +329,7 @@ class NotificationService {
   }
 
   Future<void> _cancelPanelRefreshes() async {
-    for (var id = panelRefreshBaseId; id < panelRefreshBaseId + 20; id++) {
-      await _plugin.cancel(id: id);
-    }
+    await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
   }
 
   Future<void> _cancelScheduledAlerts() async {

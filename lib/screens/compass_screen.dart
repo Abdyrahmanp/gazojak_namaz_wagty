@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import '../providers/app_state.dart';
 import '../utils/colors.dart';
+import '../utils/qibla_calculator.dart';
 import '../utils/tk_translations.dart';
 
-const double gazojakQiblaBearing = 228.3;
+/// Magnetic declination for Gazojak region (true north = magnetic + declination).
+const double _gazojakMagneticDeclination = 4.5;
 
 class CompassScreen extends StatefulWidget {
   final AppState appState;
@@ -19,7 +21,11 @@ class CompassScreen extends StatefulWidget {
 }
 
 class _CompassScreenState extends State<CompassScreen> {
-  static const double _qiblaBearing = gazojakQiblaBearing;
+  final double _qiblaBearing = calculateQiblaBearing(
+    gazojakLatitude,
+    gazojakLongitude,
+  );
+  final HeadingSmoother _smoother = HeadingSmoother(alpha: 0.18);
 
   StreamSubscription<CompassEvent>? _compassSub;
   double _heading = 0;
@@ -45,21 +51,16 @@ class _CompassScreenState extends State<CompassScreen> {
         final raw = event.heading;
         if (raw == null) return;
 
-        final normalized = ((raw % 360) + 360) % 360;
-
-        // Ani sıçramaları filtrele (magnetik gürültü)
-        if (_hasSensor) {
-          var jump = normalized - _heading;
-          if (jump > 180) jump -= 360;
-          if (jump < -180) jump += 360;
-          if (jump.abs() > 45) return;
-        }
+        // Plugin returns magnetic heading; convert to true north for qibla math.
+        final trueHeading =
+            ((raw + _gazojakMagneticDeclination) % 360 + 360) % 360;
+        final smoothed = _smoother.smooth(trueHeading);
 
         if (!mounted) return;
         setState(() {
           _hasSensor = true;
           _sensorChecked = true;
-          _heading = normalized;
+          _heading = smoothed;
         });
       },
       onError: (_) {
@@ -93,10 +94,13 @@ class _CompassScreenState extends State<CompassScreen> {
   Widget build(BuildContext context) {
     final isDark = widget.appState.isDarkMode;
     final textTheme = Theme.of(context).textTheme;
-    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final subColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textColor =
+        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final subColor =
+        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
     final cardBg = isDark ? AppColors.darkCardBg : AppColors.lightCardBg;
-    final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+    final borderColor =
+        isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
 
     if (_isAligned) {
       if (!_hasVibrated) {
@@ -125,17 +129,26 @@ class _CompassScreenState extends State<CompassScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Gazojak şäheri · $_qiblaBearing°',
+                'Gazojak şäheri · ${_qiblaBearing.toStringAsFixed(1)}°',
                 style: textTheme.bodySmall?.copyWith(color: subColor),
               ),
               const SizedBox(height: 30),
               if (_hasSensor)
                 _buildLiveCompass(
-                  isDark, textTheme, textColor, subColor, cardBg, borderColor,
+                  isDark,
+                  textTheme,
+                  textColor,
+                  subColor,
+                  cardBg,
+                  borderColor,
                 )
               else
                 _buildStaticCompass(
-                  textTheme, textColor, subColor, cardBg, borderColor,
+                  textTheme,
+                  textColor,
+                  subColor,
+                  cardBg,
+                  borderColor,
                 ),
             ],
           ),
@@ -153,7 +166,7 @@ class _CompassScreenState extends State<CompassScreen> {
     Color borderColor,
   ) {
     final headingRad = _heading * math.pi / 180.0;
-    final qiblaRad = _qiblaBearing * math.pi / 180.0;
+    final qiblaOffsetRad = _alignmentDiff * math.pi / 180.0;
     final diff = _alignmentDiff;
     final isAligned = _isAligned;
 
@@ -179,33 +192,38 @@ class _CompassScreenState extends State<CompassScreen> {
                 ),
               ],
             ),
-            child: Transform.rotate(
-              angle: -headingRad,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  _buildCompassCard(isDark),
-                  Transform.rotate(
-                    angle: qiblaRad,
-                    child: _buildQiblaNeedle(),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Transform.rotate(
+                  angle: -headingRad,
+                  child: _buildCompassCard(isDark),
+                ),
+                Transform.rotate(
+                  angle: qiblaOffsetRad,
+                  child: _buildQiblaNeedle(),
+                ),
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        isAligned ? AppColors.mintGreen : AppColors.emeraldGreen,
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
-                  Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isAligned ? AppColors.mintGreen : AppColors.emeraldGreen,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
         const SizedBox(height: 32),
         _buildStatusBox(
-          textTheme, textColor, subColor, cardBg, borderColor,
+          textTheme,
+          textColor,
+          subColor,
+          cardBg,
+          borderColor,
           isAligned: isAligned,
           diff: diff,
         ),
@@ -284,7 +302,7 @@ class _CompassScreenState extends State<CompassScreen> {
           ),
           child: Text(
             'Kompas sensory elýetersiz. Telefonyňyzy tekiz saklaň. '
-            'Kybla ugry: Demirgazyk (N) üstde bolanda, nyşan $_qiblaBearing° burçda.',
+            'Kybla ugry: Demirgazyk (N) üstde bolanda, nyşan ${_qiblaBearing.toStringAsFixed(1)}° burçda.',
             style: textTheme.bodyMedium?.copyWith(color: subColor, height: 1.5),
             textAlign: TextAlign.center,
           ),
@@ -332,7 +350,11 @@ class _CompassScreenState extends State<CompassScreen> {
   Widget _buildTip(Color subColor, TextTheme textTheme) {
     return Row(
       children: [
-        const Icon(Icons.info_outline_rounded, color: AppColors.emeraldGreen, size: 18),
+        const Icon(
+          Icons.info_outline_rounded,
+          color: AppColors.emeraldGreen,
+          size: 18,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -348,7 +370,9 @@ class _CompassScreenState extends State<CompassScreen> {
     final tickColor = isDark ? Colors.white24 : Colors.black12;
     final labelColor = isDark ? Colors.white70 : Colors.black87;
 
-    return SizedBox.expand(
+    return SizedBox(
+      width: 280,
+      height: 280,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -395,7 +419,11 @@ class _CompassScreenState extends State<CompassScreen> {
               padding: const EdgeInsets.only(bottom: 32),
               child: Text(
                 'S',
-                style: TextStyle(color: labelColor, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(
+                  color: labelColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
           ),
@@ -403,14 +431,26 @@ class _CompassScreenState extends State<CompassScreen> {
             alignment: Alignment.centerRight,
             child: Padding(
               padding: const EdgeInsets.only(right: 32),
-              child: Text('E', style: TextStyle(color: labelColor, fontWeight: FontWeight.bold)),
+              child: Text(
+                'E',
+                style: TextStyle(
+                  color: labelColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
           Align(
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: const EdgeInsets.only(left: 32),
-              child: Text('W', style: TextStyle(color: labelColor, fontWeight: FontWeight.bold)),
+              child: Text(
+                'W',
+                style: TextStyle(
+                  color: labelColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -445,7 +485,11 @@ class _CompassScreenState extends State<CompassScreen> {
           ),
           const Positioned(
             top: 16,
-            child: Icon(Icons.navigation_rounded, color: AppColors.amberGlow, size: 36),
+            child: Icon(
+              Icons.navigation_rounded,
+              color: AppColors.amberGlow,
+              size: 36,
+            ),
           ),
         ],
       ),

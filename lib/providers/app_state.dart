@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/prayer_time_service.dart';
 import '../services/notification_service.dart';
-import '../utils/tk_translations.dart';
 
 class AppState extends ChangeNotifier {
   final PrayerTimeService prayerService = PrayerTimeService();
@@ -33,7 +32,8 @@ class AppState extends ChangeNotifier {
   String _activePrayerKey = 'bamdat';
   bool _isMekruh = false;
   int _mekruhMinutesLeft = 0;
-  String? _lastPanelTitle;
+  int? _lastPanelWhenMs;
+  String? _lastPanelActiveKey;
 
   bool get isReady => _isReady;
   bool get isDarkMode => _isDarkMode;
@@ -109,6 +109,17 @@ class AppState extends ChangeNotifier {
 
   void tickPrayerTimer() => _computePrayerState();
 
+  Future<void> refreshOnResume() async {
+    if (!_isReady) return;
+    _lastPanelWhenMs = null;
+    _lastPanelActiveKey = null;
+    _computePrayerState();
+    try {
+      await _rescheduleNotifications();
+      _updatePersistentPanel();
+    } catch (_) {}
+  }
+
   void _computePrayerState() {
     if (!prayerService.isLoaded) return;
 
@@ -183,16 +194,15 @@ class AppState extends ChangeNotifier {
     final nextInfo = service.getNextPrayerInfo(targetDateTime, _offsets);
     final nextKey = nextInfo['key'] as String;
     final nextDateTime = nextInfo['dateTime'] as DateTime;
-    final nextName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
-    final title = '$nextName namazyna $_countdownStr galdy';
-
-    if (title == _lastPanelTitle) return;
-    _lastPanelTitle = title;
+    final whenMs = nextDateTime.millisecondsSinceEpoch;
+    final panelState = '${whenMs}_$_activePrayerKey';
+    if (panelState == '${_lastPanelWhenMs}_$_lastPanelActiveKey') return;
+    _lastPanelWhenMs = whenMs;
+    _lastPanelActiveKey = _activePrayerKey;
 
     final dailyTimes = service.getTimesForDate(selectedDate);
     NotificationService().showPersistentNotification(
       nextPrayerKey: nextKey,
-      remainingTime: _countdownStr,
       nextPrayerDateTime: nextDateTime,
       dailyTimes: dailyTimes,
       offsets: _offsets,
@@ -215,7 +225,8 @@ class AppState extends ChangeNotifier {
 
   Future<void> togglePersistentNotification(bool val) async {
     _persistentNotificationEnabled = val;
-    _lastPanelTitle = null;
+    _lastPanelWhenMs = null;
+    _lastPanelActiveKey = null;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('persistent_notification_enabled', val);
@@ -237,14 +248,16 @@ class AppState extends ChangeNotifier {
 
   void setSelectedDate(DateTime date) {
     _selectedDate = date;
-    _lastPanelTitle = null;
+    _lastPanelWhenMs = null;
+    _lastPanelActiveKey = null;
     notifyListeners();
     _computePrayerState();
   }
 
   void resetToToday() {
     _selectedDate = DateTime.now();
-    _lastPanelTitle = null;
+    _lastPanelWhenMs = null;
+    _lastPanelActiveKey = null;
     notifyListeners();
     _computePrayerState();
   }
@@ -252,7 +265,8 @@ class AppState extends ChangeNotifier {
   Future<void> setOffset(String key, int val) async {
     if (_offsets.containsKey(key)) {
       _offsets[key] = val;
-      _lastPanelTitle = null;
+      _lastPanelWhenMs = null;
+    _lastPanelActiveKey = null;
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('offset_$key', val);
@@ -265,7 +279,8 @@ class AppState extends ChangeNotifier {
     for (final key in _offsets.keys) {
       _offsets[key] = 0;
     }
-    _lastPanelTitle = null;
+    _lastPanelWhenMs = null;
+    _lastPanelActiveKey = null;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     for (final key in _offsets.keys) {

@@ -47,7 +47,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      widget.appState.tickPrayerTimer();
+      widget.appState.refreshOnResume();
     }
   }
 

@@ -1,11 +1,11 @@
 {
-    "name": "yeni_proje_yapisi",
-    "short_name": "yeni_proje_yapisi",
+    "name": "Gazojak Namaz Wagty",
+    "short_name": "Namaz Wagty",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#1B5E20",
-    "theme_color": "#1B5E20",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#2E7D32",
+    "description": "Gazojak şäheri üçin namaz wagtlary",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

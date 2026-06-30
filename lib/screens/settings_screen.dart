@@ -89,12 +89,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 // App Icon & Name
                 Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: const BoxDecoration(
-                    color: AppColors.emeraldGreen,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.mosque_rounded, color: Colors.white, size: 32),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/icon/app_icon.png',
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -154,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'Sorag-Jogap bölüminiň mazmunlary ygtybarly dini çeşmeler, din alymlarymyzyň '
                         'eserleri we resmi dini guramalar tarapyndan tassyklanan maglumatlar esasynda taýýarlandy.\n\n'
                         'Eger ýalňyşlyk ýa-da anyklaşdyrylmaly maglumat görseňiz, programmanyň içindäki '
-                        '"Bize bildiriň" düwmesi arkaly habar beriň.',
+                        '"Habarlaşmak we Goldaw" düwmesi arkaly habar beriň.',
                         style: TextStyle(color: subColor, fontSize: 12, height: 1.6),
                       ),
                     ],
@@ -194,9 +201,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final sc = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
     final cardBg = isDark ? AppColors.darkCardBg : AppColors.lightCardBg;
     final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
-    final offsets = widget.appState.offsets;
-    const sortedKeys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -264,117 +268,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       showDivider: false,
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 25),
-
-              // Prayer time offset — collapsed advanced section
-              _card(
-                borderColor,
-                cardBg,
-                child: Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.emeraldGreen.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.tune_rounded, color: AppColors.emeraldGreen),
-                    ),
-                    title: Text(
-                      TkTranslations.offsetSetting,
-                      style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      TkTranslations.offsetExplain,
-                      style: tt.bodySmall?.copyWith(color: sc),
-                    ),
-                    iconColor: AppColors.emeraldGreen,
-                    collapsedIconColor: sc,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: () {
-                                HapticFeedback.mediumImpact();
-                                widget.appState.resetOffsets();
-                              },
-                              child: const Text('Reset', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      ...sortedKeys.map((key) {
-                        final cur = offsets[key] ?? 0;
-                        final name = TkTranslations.prayerNamesShort[key] ?? key;
-                        return Column(
-                          children: [
-                            Divider(color: borderColor, height: 1),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(name, style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.bold)),
-                                  ),
-                                  Expanded(
-                                    flex: 4,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        IconButton(
-                                          onPressed: cur > -15
-                                              ? () {
-                                                  HapticFeedback.lightImpact();
-                                                  widget.appState.setOffset(key, cur - 1);
-                                                }
-                                              : null,
-                                          icon: const Icon(Icons.remove_circle_outline_rounded),
-                                          color: Colors.redAccent,
-                                        ),
-                                        SizedBox(
-                                          width: 44,
-                                          child: Text(
-                                            cur > 0 ? '+$cur m' : '$cur m',
-                                            style: tt.bodyMedium?.copyWith(
-                                              color: cur == 0
-                                                  ? tc
-                                                  : (cur > 0 ? AppColors.mintGreen : Colors.redAccent),
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                        IconButton(
-                                          onPressed: cur < 15
-                                              ? () {
-                                                  HapticFeedback.lightImpact();
-                                                  widget.appState.setOffset(key, cur + 1);
-                                                }
-                                              : null,
-                                          icon: const Icon(Icons.add_circle_outline_rounded),
-                                          color: AppColors.mintGreen,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
                 ),
               ),
               const SizedBox(height: 25),
