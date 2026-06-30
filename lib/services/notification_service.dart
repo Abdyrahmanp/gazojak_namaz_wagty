@@ -20,6 +20,7 @@ class NotificationService {
   static const int alertBaseId = 1000;
   static const int panelRefreshBaseId = 8900;
   static const Color _panelAccent = Color(0xFF2E7D32);
+  static const String _greenHtml = '#43A047';
 
   static bool get _isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -107,7 +108,7 @@ class NotificationService {
     }
   }
 
-  String _buildPanelBody(
+  String _buildPanelBodyHtml(
     PrayerTime dailyTimes,
     Map<String, int> offsets,
     String activeKey,
@@ -118,19 +119,23 @@ class NotificationService {
       final raw = dailyTimes.getTimeByKey(key);
       final time = _adj(key, raw, offsets);
       final name = TkTranslations.prayerNamesShort[key] ?? key;
+      final padded = name.padRight(8);
       if (key == activeKey) {
-        lines.add('● $name   $time');
+        lines.add(
+          '<font color="$_greenHtml"><b>$padded $time</b></font>',
+        );
       } else {
-        lines.add('   $name   $time');
+        lines.add('$padded $time');
       }
     }
-    return lines.join('\n');
+    return lines.join('<br/>');
   }
 
+  String _panelTitle(String nextPrayerName, String remainingTime) =>
+      '$nextPrayerName namazyna $remainingTime galdy';
+
   AndroidNotificationDetails _persistentDetails({
-    required String nextPrayerName,
-    required DateTime nextPrayerDateTime,
-    required String body,
+    required String bodyHtml,
   }) {
     return AndroidNotificationDetails(
       'persistent_prayer_times',
@@ -141,24 +146,20 @@ class NotificationService {
       ongoing: true,
       autoCancel: false,
       silent: true,
-      showWhen: true,
-      when: nextPrayerDateTime.millisecondsSinceEpoch,
-      usesChronometer: true,
-      chronometerCountDown: true,
+      showWhen: false,
       icon: '@mipmap/ic_launcher',
       color: _panelAccent,
       colorized: true,
       styleInformation: BigTextStyleInformation(
-        body,
-        contentTitle: '$nextPrayerName namazyna',
-        summaryText: 'Gazojak · Namaz wagtlary',
-        htmlFormatBigText: false,
+        bodyHtml,
+        htmlFormatBigText: true,
       ),
     );
   }
 
   Future<void> showPersistentNotification({
     required String nextPrayerKey,
+    required String remainingTime,
     required DateTime nextPrayerDateTime,
     required PrayerTime dailyTimes,
     required Map<String, int> offsets,
@@ -169,19 +170,16 @@ class NotificationService {
 
     final nextPrayerName =
         TkTranslations.prayerNamesShort[nextPrayerKey] ?? nextPrayerKey;
-    final body = _buildPanelBody(dailyTimes, offsets, activePrayerKey);
+    final title = _panelTitle(nextPrayerName, remainingTime);
+    final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activePrayerKey);
 
     try {
       await _plugin.show(
         id: persistentNotificationId,
-        title: '$nextPrayerName namazyna',
-        body: body,
+        title: title,
+        body: bodyHtml.replaceAll(RegExp(r'<[^>]*>'), ''),
         notificationDetails: NotificationDetails(
-          android: _persistentDetails(
-            nextPrayerName: nextPrayerName,
-            nextPrayerDateTime: nextPrayerDateTime,
-            body: body,
-          ),
+          android: _persistentDetails(bodyHtml: bodyHtml),
         ),
       );
     } catch (e) {
@@ -264,7 +262,6 @@ class NotificationService {
     }
   }
 
-  /// Indiki namaz wagtynda paneli täzele (programma ýapyk bolsa hem).
   Future<void> _scheduleNextPanelRefresh(
     PrayerTimeService prayerService,
     Map<String, int> offsets,
@@ -295,20 +292,23 @@ class NotificationService {
     final nextKey = nextInfo['key'] as String;
     final nextDt = nextInfo['dateTime'] as DateTime;
     final nextName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
-    final body = _buildPanelBody(dailyTimes, offsets, activeKey);
+    final diff = nextDt.difference(atTime);
+    final h = diff.inHours;
+    final m = diff.inMinutes.remainder(60);
+    final s = diff.inSeconds.remainder(60);
+    final remaining =
+        '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    final title = _panelTitle(nextName, remaining);
+    final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activeKey);
 
     try {
       await _plugin.zonedSchedule(
         id: persistentNotificationId,
-        title: '$nextName namazyna',
-        body: body,
+        title: title,
+        body: bodyHtml.replaceAll(RegExp(r'<[^>]*>'), ''),
         scheduledDate: tz.TZDateTime.from(atTime, tz.local),
         notificationDetails: NotificationDetails(
-          android: _persistentDetails(
-            nextPrayerName: nextName,
-            nextPrayerDateTime: nextDt,
-            body: body,
-          ),
+          android: _persistentDetails(bodyHtml: bodyHtml),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );

@@ -7,31 +7,35 @@ import 'services/notification_service.dart';
 import 'utils/colors.dart';
 import 'utils/tk_translations.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  runApp(const MyApp());
+
+  final appState = AppState();
+  await appState.initialize();
+
+  runApp(MyApp(appState: appState));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final AppState appState;
+
+  const MyApp({super.key, required this.appState});
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  final AppState _appState = AppState();
   bool _permissionRequested = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _appState.initialize();
   }
 
   @override
@@ -43,7 +47,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _appState.tickPrayerTimer();
+      widget.appState.tickPrayerTimer();
     }
   }
 
@@ -82,9 +86,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     ));
 
     return ListenableBuilder(
-      listenable: _appState,
+      listenable: widget.appState,
       builder: (context, _) {
-        final isDark = _appState.isDarkMode;
+        final isDark = widget.appState.isDarkMode;
 
         return MaterialApp(
           title: TkTranslations.appTitle,
@@ -135,7 +139,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _requestNotificationPermission(context);
               });
-              return MainNavigation(appState: _appState);
+              return MainNavigation(appState: widget.appState);
             },
           ),
         );

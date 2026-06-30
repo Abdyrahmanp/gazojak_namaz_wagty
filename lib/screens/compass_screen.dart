@@ -1,15 +1,12 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import '../providers/app_state.dart';
 import '../utils/colors.dart';
-import '../utils/qibla_calculator.dart';
 import '../utils/tk_translations.dart';
 
-/// Gazojak üçin takyk Kybla ugry (GPS gerek däl).
 const double gazojakQiblaBearing = 228.3;
 
 class CompassScreen extends StatefulWidget {
@@ -21,24 +18,18 @@ class CompassScreen extends StatefulWidget {
   State<CompassScreen> createState() => _CompassScreenState();
 }
 
-class _CompassScreenState extends State<CompassScreen>
-    with SingleTickerProviderStateMixin {
+class _CompassScreenState extends State<CompassScreen> {
   static const double _qiblaBearing = gazojakQiblaBearing;
 
-  final HeadingSmoother _smoother = HeadingSmoother(alpha: 0.04);
   StreamSubscription<CompassEvent>? _compassSub;
-  double _displayHeading = 0;
+  double _heading = 0;
   bool _hasSensor = false;
   bool _sensorChecked = false;
   bool _hasVibrated = false;
-  late Ticker _ticker;
 
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker((_) {
-      if (mounted) setState(() {});
-    });
     _startCompass();
   }
 
@@ -54,20 +45,29 @@ class _CompassScreenState extends State<CompassScreen>
         final raw = event.heading;
         if (raw == null) return;
 
-        final accuracy = event.accuracy;
-        if (accuracy != null && accuracy < 0) return;
+        final normalized = ((raw % 360) + 360) % 360;
 
-        _hasSensor = true;
-        _sensorChecked = true;
-        _displayHeading = _smoother.smooth(raw);
-        if (!_ticker.isActive) _ticker.start();
+        // Ani sıçramaları filtrele (magnetik gürültü)
+        if (_hasSensor) {
+          var jump = normalized - _heading;
+          if (jump > 180) jump -= 360;
+          if (jump < -180) jump += 360;
+          if (jump.abs() > 45) return;
+        }
+
+        if (!mounted) return;
+        setState(() {
+          _hasSensor = true;
+          _sensorChecked = true;
+          _heading = normalized;
+        });
       },
       onError: (_) {
         if (mounted) setState(() => _sensorChecked = true);
       },
     );
 
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted && !_sensorChecked) {
         setState(() => _sensorChecked = true);
       }
@@ -77,12 +77,11 @@ class _CompassScreenState extends State<CompassScreen>
   @override
   void dispose() {
     _compassSub?.cancel();
-    _ticker.dispose();
     super.dispose();
   }
 
   double get _alignmentDiff {
-    var diff = (_qiblaBearing - _displayHeading).remainder(360);
+    var diff = (_qiblaBearing - _heading).remainder(360);
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
     return diff;
@@ -134,10 +133,6 @@ class _CompassScreenState extends State<CompassScreen>
                 _buildLiveCompass(
                   isDark, textTheme, textColor, subColor, cardBg, borderColor,
                 )
-              else if (_sensorChecked)
-                _buildStaticCompass(
-                  textTheme, textColor, subColor, cardBg, borderColor,
-                )
               else
                 _buildStaticCompass(
                   textTheme, textColor, subColor, cardBg, borderColor,
@@ -157,7 +152,7 @@ class _CompassScreenState extends State<CompassScreen>
     Color cardBg,
     Color borderColor,
   ) {
-    final headingRad = _displayHeading * math.pi / 180.0;
+    final headingRad = _heading * math.pi / 180.0;
     final qiblaRad = _qiblaBearing * math.pi / 180.0;
     final diff = _alignmentDiff;
     final isAligned = _isAligned;
@@ -287,24 +282,11 @@ class _CompassScreenState extends State<CompassScreen>
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderColor),
           ),
-          child: Column(
-            children: [
-              Text(
-                'Telefonyňyzy gowy tutuň',
-                style: textTheme.titleMedium?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Kompas sensory ýok ýa-da kalibrasiýa gerek. '
-                'Telefonyňyzy tekiz saklaň we aşakdaky ugry görüň: '
-                'Demirgazyk (N) üstde bolmaly, Kybla nyşany $_qiblaBearing° ugrynda.',
-                style: textTheme.bodyMedium?.copyWith(color: subColor, height: 1.5),
-                textAlign: TextAlign.center,
-              ),
-            ],
+          child: Text(
+            'Kompas sensory elýetersiz. Telefonyňyzy tekiz saklaň. '
+            'Kybla ugry: Demirgazyk (N) üstde bolanda, nyşan $_qiblaBearing° burçda.',
+            style: textTheme.bodyMedium?.copyWith(color: subColor, height: 1.5),
+            textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: 16),

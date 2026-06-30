@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/prayer_time_service.dart';
 import '../services/notification_service.dart';
+import '../utils/tk_translations.dart';
 
 class AppState extends ChangeNotifier {
   final PrayerTimeService prayerService = PrayerTimeService();
@@ -11,6 +12,7 @@ class AppState extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
   bool _persistentNotificationEnabled = true;
   bool _notificationSoundEnabled = true;
+  bool _isReady = false;
 
   final Map<String, int> _offsets = {
     'bamdat': 0,
@@ -26,14 +28,14 @@ class AppState extends ChangeNotifier {
   int _zikirTarget = 33;
 
   Timer? _prayerTimer;
-  String _countdownStr = '00:00:00';
+  String _countdownStr = '';
   String _nextPrayerKey = 'bamdat';
   String _activePrayerKey = 'bamdat';
   bool _isMekruh = false;
   int _mekruhMinutesLeft = 0;
-  String? _lastPanelActiveKey;
-  DateTime? _lastPanelUpdate;
+  String? _lastPanelTitle;
 
+  bool get isReady => _isReady;
   bool get isDarkMode => _isDarkMode;
   DateTime get selectedDate => _selectedDate;
   bool get persistentNotificationEnabled => _persistentNotificationEnabled;
@@ -51,6 +53,11 @@ class AppState extends ChangeNotifier {
 
   Future<void> initialize() async {
     await prayerService.loadDatabase();
+    _computePrayerState();
+
+    _isReady = true;
+    notifyListeners();
+
     try {
       final prefs = await SharedPreferences.getInstance();
       _isDarkMode = prefs.getBool('is_dark_mode') ?? true;
@@ -69,16 +76,19 @@ class AppState extends ChangeNotifier {
       print('Error loading settings: $e');
     }
 
+    _computePrayerState();
+    notifyListeners();
+
     try {
       await NotificationService().initialize();
       await _rescheduleNotifications();
+      _updatePersistentPanel();
     } catch (e) {
       // ignore: avoid_print
       print('Notification setup error: $e');
     }
 
     _startPrayerTimer();
-    notifyListeners();
   }
 
   Future<void> _rescheduleNotifications() async {
@@ -92,15 +102,14 @@ class AppState extends ChangeNotifier {
 
   void _startPrayerTimer() {
     _prayerTimer?.cancel();
-    _tickPrayerTimer();
     _prayerTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _tickPrayerTimer();
+      _computePrayerState();
     });
   }
 
-  void tickPrayerTimer() => _tickPrayerTimer();
+  void tickPrayerTimer() => _computePrayerState();
 
-  void _tickPrayerTimer() {
+  void _computePrayerState() {
     if (!prayerService.isLoaded) return;
 
     final now = DateTime.now();
@@ -141,10 +150,6 @@ class AppState extends ChangeNotifier {
       mekruhMinutesLeft = diffToAgsam.inMinutes + 1;
     }
 
-    final isShowingToday = selectedDate.year == now.year &&
-        selectedDate.month == now.month &&
-        selectedDate.day == now.day;
-
     _countdownStr = countdownStr;
     _nextPrayerKey = nextKey;
     _activePrayerKey = activeKey;
@@ -152,23 +157,47 @@ class AppState extends ChangeNotifier {
     _mekruhMinutesLeft = mekruhMinutesLeft;
     notifyListeners();
 
-    if (_persistentNotificationEnabled && isShowingToday) {
-      final panelChanged = activeKey != _lastPanelActiveKey;
-      final stale = _lastPanelUpdate == null ||
-          now.difference(_lastPanelUpdate!) > const Duration(seconds: 30);
-      if (panelChanged || stale) {
-        _lastPanelActiveKey = activeKey;
-        _lastPanelUpdate = now;
-        final dailyTimes = service.getTimesForDate(selectedDate);
-        NotificationService().showPersistentNotification(
-          nextPrayerKey: nextKey,
-          nextPrayerDateTime: nextDateTime,
-          dailyTimes: dailyTimes,
-          offsets: _offsets,
-          activePrayerKey: activeKey,
-        );
-      }
-    }
+    _updatePersistentPanel();
+  }
+
+  void _updatePersistentPanel() {
+    if (!_persistentNotificationEnabled) return;
+    if (!prayerService.isLoaded) return;
+
+    final now = DateTime.now();
+    final selectedDate = _selectedDate;
+    final isShowingToday = selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day;
+    if (!isShowingToday) return;
+
+    final service = prayerService;
+    final targetDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+    final nextInfo = service.getNextPrayerInfo(targetDateTime, _offsets);
+    final nextKey = nextInfo['key'] as String;
+    final nextDateTime = nextInfo['dateTime'] as DateTime;
+    final nextName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
+    final title = '$nextName namazyna $_countdownStr galdy';
+
+    if (title == _lastPanelTitle) return;
+    _lastPanelTitle = title;
+
+    final dailyTimes = service.getTimesForDate(selectedDate);
+    NotificationService().showPersistentNotification(
+      nextPrayerKey: nextKey,
+      remainingTime: _countdownStr,
+      nextPrayerDateTime: nextDateTime,
+      dailyTimes: dailyTimes,
+      offsets: _offsets,
+      activePrayerKey: _activePrayerKey,
+    );
   }
 
   @override
@@ -186,6 +215,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> togglePersistentNotification(bool val) async {
     _persistentNotificationEnabled = val;
+    _lastPanelTitle = null;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('persistent_notification_enabled', val);
@@ -193,7 +223,7 @@ class AppState extends ChangeNotifier {
       await NotificationService().cancelPersistentNotification();
     } else {
       await _rescheduleNotifications();
-      _tickPrayerTimer();
+      _updatePersistentPanel();
     }
   }
 
@@ -207,24 +237,27 @@ class AppState extends ChangeNotifier {
 
   void setSelectedDate(DateTime date) {
     _selectedDate = date;
+    _lastPanelTitle = null;
     notifyListeners();
-    _tickPrayerTimer();
+    _computePrayerState();
   }
 
   void resetToToday() {
     _selectedDate = DateTime.now();
+    _lastPanelTitle = null;
     notifyListeners();
-    _tickPrayerTimer();
+    _computePrayerState();
   }
 
   Future<void> setOffset(String key, int val) async {
     if (_offsets.containsKey(key)) {
       _offsets[key] = val;
+      _lastPanelTitle = null;
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('offset_$key', val);
       await _rescheduleNotifications();
-      _tickPrayerTimer();
+      _computePrayerState();
     }
   }
 
@@ -232,13 +265,14 @@ class AppState extends ChangeNotifier {
     for (final key in _offsets.keys) {
       _offsets[key] = 0;
     }
+    _lastPanelTitle = null;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     for (final key in _offsets.keys) {
       await prefs.setInt('offset_$key', 0);
     }
     await _rescheduleNotifications();
-    _tickPrayerTimer();
+    _computePrayerState();
   }
 
   Future<void> incrementZikir() async {
