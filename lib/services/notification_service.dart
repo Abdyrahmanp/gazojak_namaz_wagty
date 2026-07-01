@@ -204,43 +204,28 @@ class NotificationService {
     if (!_isAndroid) return;
     if (!_isInitialized) await initialize();
     try {
-      await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
+      await _cancelAllPanelNotifications();
     } catch (e) {
       debugPrint('cancelPersistentNotification error: $e');
     }
-    await _cancelPanelRefreshes();
   }
 
-  AndroidNotificationDetails _alertDetails(bool playSound, String prayerKey, String prayerName) {
-    // 'gun' (Günüň dogmagy) için özel bildirim metni
-    final bool isGunDogmagy = prayerKey == 'gun';
-    final String notifTitle = isGunDogmagy
-        ? 'Günüň dogmagy wagty boldy'
-        : '$prayerName namazy boldy';
-    final String notifBody = isGunDogmagy
-        ? 'Gazojak şäherinde gün dogdy. Ertir namazynyň wagty geçýär.'
-        : 'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.';
-
+  AndroidNotificationDetails _alertDetails(bool playSound) {
     return AndroidNotificationDetails(
       'prayer_alerts',
       'Namaz wagty habarlandyryşy',
       channelDescription: 'Namaz wagty gelende bildiriş iberýär',
       importance: Importance.max,
       priority: Priority.max,
-      // Telefon sessizde olsa bile titreşim ve ses
+      // Telefon sessizde olsa bile titreşim we ses
       playSound: playSound,
       enableVibration: true,
-      // Alarm tipi ses kanalı — DND/sessiz modunu aşar
+      // Alarm tipi ses kanaly — DND/sessiz modyny aşar
       audioAttributesUsage: AudioAttributesUsage.alarm,
       color: _panelAccent,
-      styleInformation: BigTextStyleInformation(
-        notifBody,
-        contentTitle: '<b>$notifTitle</b>',
-        htmlFormatBigText: true,
-        htmlFormatContentTitle: true,
-      ),
     );
   }
+
 
   Future<void> schedulePrayerNotifications({
     required PrayerTimeService prayerService,
@@ -290,7 +275,7 @@ class NotificationService {
             body: notifBody,
             scheduledDate: tzTime,
             notificationDetails: NotificationDetails(
-              android: _alertDetails(soundEnabled, key, prayerName),
+              android: _alertDetails(soundEnabled),
             ),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );
@@ -305,7 +290,8 @@ class NotificationService {
     PrayerTimeService prayerService,
     Map<String, int> offsets,
   ) async {
-    await _cancelPanelRefreshes();
+    // Sadece planlı yenilemeleri iptal et — aktif panel bildirimi kaybolmasın
+    await _cancelScheduledPanelRefreshes();
 
     final now = DateTime.now();
 
@@ -379,15 +365,21 @@ class NotificationService {
     }
   }
 
-  Future<void> _cancelPanelRefreshes() async {
-    // Ana panel bildirimi
-    await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
-    // Planlanmış panel yenilemeleri (ID aralığı: 8889 - 8910)
+  /// Sadece gelecekte planlanmış panel yenileme bildirimlerini iptal eder.
+  /// Ana panel (ID 8888) bu fonksiyon tarafından iptal EDİLMEZ.
+  Future<void> _cancelScheduledPanelRefreshes() async {
     for (var i = 1; i <= 22; i++) {
       try {
         await _plugin.cancel(id: persistentNotificationId + i, tag: _panelTag);
       } catch (_) {}
     }
+  }
+
+  /// Hem ana paneli hem tüm planlanmış yenilemeleri iptal eder.
+  /// Sadece kullanıcı 'paneli kapat' dediğinde çağrılmalı.
+  Future<void> _cancelAllPanelNotifications() async {
+    await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
+    await _cancelScheduledPanelRefreshes();
   }
 
   Future<void> _cancelScheduledAlerts() async {

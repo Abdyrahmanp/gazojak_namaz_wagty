@@ -311,7 +311,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 12),
                       Text(
                         TkTranslations.batteryOptMessage,
-                        style: tt.bodySmall?.copyWith(color: tc, height: 1.55),
+                        style: tt.bodySmall?.copyWith(
+                          color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                          height: 1.55,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -583,23 +586,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openBatterySettings() async {
     HapticFeedback.selectionClick();
     const packageName = 'com.example.gazojak_namaz_wagty';
-
-    // Önce uygulamaya özel batarya optimizasyon ekranı
-    final specificUri = Uri(
-      scheme: 'package',
-      path: packageName,
-    );
-    // Genel batarya optimizasyon sazlamalary
-    final generalUri = Uri.parse('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
-
     bool opened = false;
 
-    // Uygulamaya özel REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+    // 1. Önce: REQUEST_IGNORE_BATTERY_OPTIMIZATIONS — doğrudan bu uygulamayı muaf et
     try {
       final reqUri = Uri(
         scheme: 'android.settings',
         host: 'REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-        queryParameters: {'package': packageName},
+        path: '/$packageName',
       );
       if (await canLaunchUrl(reqUri)) {
         await launchUrl(reqUri, mode: LaunchMode.externalApplication);
@@ -607,27 +601,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (_) {}
 
-    // Fallback: genel batarya sazlamalary
+    // 2. Fallback: Genel batarya optimizasyon ekranı
     if (!opened) {
-      for (final uri in [generalUri, specificUri]) {
-        try {
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-            opened = true;
-            break;
-          }
-        } catch (_) {}
-      }
+      try {
+        final generalUri = Uri(
+          scheme: 'android.settings',
+          host: 'IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+        );
+        if (await canLaunchUrl(generalUri)) {
+          await launchUrl(generalUri, mode: LaunchMode.externalApplication);
+          opened = true;
+        }
+      } catch (_) {}
+    }
+
+    // 3. Son çare: Uygulamanın uygulama bilgisi ekranı
+    if (!opened) {
+      try {
+        final appInfoUri = Uri(
+          scheme: 'android.settings',
+          host: 'APPLICATION_DETAILS_SETTINGS',
+          path: '/$packageName',
+        );
+        if (await canLaunchUrl(appInfoUri)) {
+          await launchUrl(appInfoUri, mode: LaunchMode.externalApplication);
+          opened = true;
+        }
+      } catch (_) {}
     }
 
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            'Batareýa sazlamalaryny telefonyňyzyň Sazlamalar > Programma > Batareýa bölüminden açyň.',
+            'Sazlamalar → Programmalar → Gazojak → Batarýa bölümine giń we "Çäklendirmesiz" saýla.',
+            style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 6),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
@@ -635,8 +646,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
   }
-
-
 
   Widget _card(Color border, Color bg, {required Widget child}) => Container(
         decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20), border: Border.all(color: border)),
