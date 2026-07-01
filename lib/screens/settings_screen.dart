@@ -272,8 +272,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 25),
 
+              // Batarya Optimizasyon Uyarısı
+              Text('Bildirişler', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: isDark ? 0.08 : 0.06),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.battery_alert_rounded, color: Colors.orange, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              TkTranslations.batteryOptTitle,
+                              style: tt.titleMedium?.copyWith(
+                                color: tc,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        TkTranslations.batteryOptMessage,
+                        style: tt.bodySmall?.copyWith(color: tc, height: 1.55),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _openBatterySettings,
+                          icon: const Icon(Icons.settings_outlined, size: 18),
+                          label: Text(TkTranslations.batteryOptCheck,
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 25),
+
               // About + Legal + Contact Support
               Text('Maglumat', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
+
               const SizedBox(height: 12),
               _card(
                 borderColor,
@@ -514,6 +579,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
   }
+
+  Future<void> _openBatterySettings() async {
+    HapticFeedback.selectionClick();
+    const packageName = 'com.example.gazojak_namaz_wagty';
+
+    // Önce uygulamaya özel batarya optimizasyon ekranı
+    final specificUri = Uri(
+      scheme: 'package',
+      path: packageName,
+    );
+    // Genel batarya optimizasyon sazlamalary
+    final generalUri = Uri.parse('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
+
+    bool opened = false;
+
+    // Uygulamaya özel REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+    try {
+      final reqUri = Uri(
+        scheme: 'android.settings',
+        host: 'REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+        queryParameters: {'package': packageName},
+      );
+      if (await canLaunchUrl(reqUri)) {
+        await launchUrl(reqUri, mode: LaunchMode.externalApplication);
+        opened = true;
+      }
+    } catch (_) {}
+
+    // Fallback: genel batarya sazlamalary
+    if (!opened) {
+      for (final uri in [generalUri, specificUri]) {
+        try {
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+            opened = true;
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Batareýa sazlamalaryny telefonyňyzyň Sazlamalar > Programma > Batareýa bölüminden açyň.',
+          ),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
+  }
+
+
 
   Widget _card(Color border, Color bg, {required Widget child}) => Container(
         decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20), border: Border.all(color: border)),

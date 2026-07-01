@@ -11,7 +11,7 @@ class TkTranslations {
 
   static const Map<String, String> prayerNamesShort = {
     'bamdat': 'Ertir',
-    'gun':    'Gün dogmagy',
+    'gun':    'Günüň dogmagy',
     'oyle':   'Öýle',
     'ikindi': 'Ikindi',
     'agsam':  'Agşam',
@@ -181,9 +181,20 @@ class TkTranslations {
   static const String qaSubmitTitle         = 'Täze sorag ugratmak';
   static const String qaSubmitBtn           = 'Soragy ugrat';
 
-  // ── Notification ─────────────────────────────────────────────────────────────
+  // ── Notification ─────────────────────────────────────────────────────
   static const String notificationTitle = 'Namaz Wagty Geldi!';
   static const String notificationBody  = 'Gazojak şäherinde %s wagty girdi.';
+
+  // ── Battery Optimization ──────────────────────────────────────────
+  static const String batteryOptTitle   = 'Bildirişleriň wagtynda gelmegi üçin';
+  static const String batteryOptMessage =
+      'Xiaomi, Samsung ýaly telefonlardaky batareýa tygşytlaýjy ulgamlar '
+      'programmaňyzyň fon işini doňdyryp bilýär.\n\n'
+      'Bildirişleriň wagtynda gelmegi üçin batareýa sazlamalaryndan '
+      "programma 'Çäklendirmesiz' (No restrictions) rugsadyny beriň.";
+  static const String batteryOptButton  = 'Batareýa sazlamalaryny aç';
+  static const String batteryOptCheck   = 'Barlamak';
+  static const String batteryOptDesc    = 'Bildirişler doňdurylanda wagtynda gelmeýär';
 
   // ── Date helper ──────────────────────────────────────────────────────────────
   static String formatFullDate(DateTime date) {

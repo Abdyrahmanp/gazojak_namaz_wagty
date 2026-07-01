@@ -51,9 +51,12 @@ class _TasbihScreenState extends State<TasbihScreen> with SingleTickerProviderSt
 
     // Haptic feedback
     if (target > 0 && countAfter % target == 0) {
-      // High vibration when target reached
+      // Güçlü üçlü titreşim — 33, 66, 99... hedefine ulaşıldığında
       HapticFeedback.heavyImpact();
-      Future.delayed(const Duration(milliseconds: 150), () {
+      Future.delayed(const Duration(milliseconds: 120), () {
+        HapticFeedback.heavyImpact();
+      });
+      Future.delayed(const Duration(milliseconds: 280), () {
         HapticFeedback.heavyImpact();
       });
       _showTargetReachedDialog();
@@ -61,6 +64,7 @@ class _TasbihScreenState extends State<TasbihScreen> with SingleTickerProviderSt
       HapticFeedback.lightImpact();
     }
   }
+
 
   void _showTargetReachedDialog() {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -34,6 +34,7 @@ class AppState extends ChangeNotifier {
   int _mekruhMinutesLeft = 0;
   int? _lastPanelWhenMs;
   String? _lastPanelActiveKey;
+  String? _lastPanelNextKey;
 
   bool get isReady => _isReady;
   bool get isDarkMode => _isDarkMode;
@@ -195,10 +196,12 @@ class AppState extends ChangeNotifier {
     final nextKey = nextInfo['key'] as String;
     final nextDateTime = nextInfo['dateTime'] as DateTime;
     final whenMs = nextDateTime.millisecondsSinceEpoch;
-    final panelState = '${whenMs}_$_activePrayerKey';
-    if (panelState == '${_lastPanelWhenMs}_$_lastPanelActiveKey') return;
+    // nextKey dahil ederek namazdan namaza geçişte panel güncellenir
+    final panelState = '${whenMs}_${_activePrayerKey}_$nextKey';
+    if (panelState == '${_lastPanelWhenMs}_${_lastPanelActiveKey}_$_lastPanelNextKey') return;
     _lastPanelWhenMs = whenMs;
     _lastPanelActiveKey = _activePrayerKey;
+    _lastPanelNextKey = nextKey;
 
     final dailyTimes = service.getTimesForDate(selectedDate);
     NotificationService().showPersistentNotification(
@@ -227,6 +230,7 @@ class AppState extends ChangeNotifier {
     _persistentNotificationEnabled = val;
     _lastPanelWhenMs = null;
     _lastPanelActiveKey = null;
+    _lastPanelNextKey = null;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('persistent_notification_enabled', val);
@@ -250,6 +254,7 @@ class AppState extends ChangeNotifier {
     _selectedDate = date;
     _lastPanelWhenMs = null;
     _lastPanelActiveKey = null;
+    _lastPanelNextKey = null;
     notifyListeners();
     _computePrayerState();
   }
@@ -258,6 +263,7 @@ class AppState extends ChangeNotifier {
     _selectedDate = DateTime.now();
     _lastPanelWhenMs = null;
     _lastPanelActiveKey = null;
+    _lastPanelNextKey = null;
     notifyListeners();
     _computePrayerState();
   }
@@ -266,7 +272,8 @@ class AppState extends ChangeNotifier {
     if (_offsets.containsKey(key)) {
       _offsets[key] = val;
       _lastPanelWhenMs = null;
-    _lastPanelActiveKey = null;
+      _lastPanelActiveKey = null;
+      _lastPanelNextKey = null;
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('offset_$key', val);
@@ -281,6 +288,7 @@ class AppState extends ChangeNotifier {
     }
     _lastPanelWhenMs = null;
     _lastPanelActiveKey = null;
+    _lastPanelNextKey = null;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     for (final key in _offsets.keys) {

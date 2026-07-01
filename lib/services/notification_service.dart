@@ -53,6 +53,7 @@ class NotificationService {
       debugPrint('NotificationService timezone error: $e');
     }
 
+    // Use the vector XML drawable (no PNG anymore)
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@drawable/ic_notification');
     const InitializationSettings initSettings =
@@ -131,7 +132,13 @@ class NotificationService {
     return lines.join('<br/>');
   }
 
-  String _panelTitle(String nextPrayerName) => '$nextPrayerName namazyna galdy';
+  /// Panel başlığı: 'gun' key için özel yazı, diğerleri için 'namazyna galdy'
+  String _panelTitle(String prayerKey, String prayerName) {
+    if (prayerKey == 'gun') {
+      return 'Günüň dogmagy wagty boldy';
+    }
+    return '$prayerName namazyna galdy';
+  }
 
   AndroidNotificationDetails _persistentDetails({
     required String bodyHtml,
@@ -151,10 +158,8 @@ class NotificationService {
       when: whenMs,
       usesChronometer: true,
       chronometerCountDown: true,
-      icon: '@drawable/ic_notification',
-      largeIcon: const DrawableResourceAndroidBitmap(
-        '@drawable/ic_notification_large',
-      ),
+      // Icon kaldırıldı — platform varsayılan ikonu kullanılacak
+      // largeIcon kaldırıldı — sağdaki büyük resim kaldırıldı
       color: _panelAccent,
       tag: _panelTag,
       styleInformation: BigTextStyleInformation(
@@ -177,7 +182,7 @@ class NotificationService {
 
     final nextPrayerName =
         TkTranslations.prayerNamesShort[nextPrayerKey] ?? nextPrayerKey;
-    final title = _panelTitle(nextPrayerName);
+    final title = _panelTitle(nextPrayerKey, nextPrayerName);
     final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activePrayerKey);
     final whenMs = nextPrayerDateTime.millisecondsSinceEpoch;
 
@@ -206,26 +211,36 @@ class NotificationService {
     await _cancelPanelRefreshes();
   }
 
-  AndroidNotificationDetails _alertDetails(bool playSound, String prayerName) =>
-      AndroidNotificationDetails(
-        'prayer_alerts',
-        'Namaz wagty habarlandyryşy',
-        channelDescription: 'Namaz wagty gelende bildiriş iberýär',
-        importance:
-            playSound ? Importance.max : Importance.defaultImportance,
-        priority: playSound ? Priority.high : Priority.defaultPriority,
-        playSound: playSound,
-        enableVibration: true,
-        icon: '@drawable/ic_notification',
-        color: _panelAccent,
-        styleInformation: BigTextStyleInformation(
-          'Gazojak şäherinde $prayerName wagty girdi. '
-          'Namazyňyzy berjaý etmegi unutmaň.',
-          contentTitle: '<b>$prayerName namazy boldy</b>',
-          htmlFormatBigText: true,
-          htmlFormatContentTitle: true,
-        ),
-      );
+  AndroidNotificationDetails _alertDetails(bool playSound, String prayerKey, String prayerName) {
+    // 'gun' (Günüň dogmagy) için özel bildirim metni
+    final bool isGunDogmagy = prayerKey == 'gun';
+    final String notifTitle = isGunDogmagy
+        ? 'Günüň dogmagy wagty boldy'
+        : '$prayerName namazy boldy';
+    final String notifBody = isGunDogmagy
+        ? 'Gazojak şäherinde gün dogdy. Ertir namazynyň wagty geçýär.'
+        : 'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.';
+
+    return AndroidNotificationDetails(
+      'prayer_alerts',
+      'Namaz wagty habarlandyryşy',
+      channelDescription: 'Namaz wagty gelende bildiriş iberýär',
+      importance: Importance.max,
+      priority: Priority.max,
+      // Telefon sessizde olsa bile titreşim ve ses
+      playSound: playSound,
+      enableVibration: true,
+      // Alarm tipi ses kanalı — DND/sessiz modunu aşar
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      color: _panelAccent,
+      styleInformation: BigTextStyleInformation(
+        notifBody,
+        contentTitle: '<b>$notifTitle</b>',
+        htmlFormatBigText: true,
+        htmlFormatContentTitle: true,
+      ),
+    );
+  }
 
   Future<void> schedulePrayerNotifications({
     required PrayerTimeService prayerService,
@@ -259,15 +274,23 @@ class NotificationService {
         final id = alertBaseId + dayIndex * 10 + i;
         final tzTime = tz.TZDateTime.from(prayerTime, tz.local);
 
+        // 'gun' için özel başlık/metin
+        final bool isGunDogmagy = key == 'gun';
+        final String notifTitle = isGunDogmagy
+            ? 'Günüň dogmagy wagty boldy'
+            : '$prayerName namazy boldy';
+        final String notifBody = isGunDogmagy
+            ? 'Gazojak şäherinde gün dogdy. Ertir namazynyň wagty geçýär.'
+            : 'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.';
+
         try {
           await _plugin.zonedSchedule(
             id: id,
-            title: '$prayerName namazy boldy',
-            body:
-                'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.',
+            title: notifTitle,
+            body: notifBody,
             scheduledDate: tzTime,
             notificationDetails: NotificationDetails(
-              android: _alertDetails(soundEnabled, prayerName),
+              android: _alertDetails(soundEnabled, key, prayerName),
             ),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );
@@ -285,51 +308,86 @@ class NotificationService {
     await _cancelPanelRefreshes();
 
     final now = DateTime.now();
-    DateTime? nearest;
-    DateTime? nearestDay;
 
-    for (final dayOffset in [0, 1, 2]) {
+    // Her namaz vakti için panel yenileme planla (today + tomorrow)
+    const prayerKeys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
+
+    for (final dayOffset in [0, 1]) {
       final date = now.add(Duration(days: dayOffset));
+      final times = prayerService.getAdjustedDateTimes(date, offsets);
       final dayDate = DateTime(date.year, date.month, date.day);
-      for (final t in prayerService.getAdjustedDateTimes(date, offsets).values) {
-        if (t.isAfter(now) && (nearest == null || t.isBefore(nearest))) {
-          nearest = t;
-          nearestDay = dayDate;
+      final dailyTimes = prayerService.getTimesForDate(dayDate);
+
+      for (var i = 0; i < prayerKeys.length; i++) {
+        final atKey = prayerKeys[i];
+        final atTime = times[atKey]!;
+
+        // Sadece gelecekteki vakitler için planla
+        if (!atTime.isAfter(now)) continue;
+
+        // O vakit başladığında aktif namaz bu olacak
+        final activeKey = atKey;
+        // Sonraki namazı bul
+        final nextInfo = prayerService.getNextPrayerInfo(atTime.add(const Duration(seconds: 1)), offsets);
+        final nextKey = nextInfo['key'] as String;
+        final nextDt = nextInfo['dateTime'] as DateTime;
+
+        final nextPrayerName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
+        final title = _panelTitle(nextKey, nextPrayerName);
+        final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activeKey);
+        final whenMs = nextDt.millisecondsSinceEpoch;
+
+        // Her vakit için farklı ID kullan (tag ile gruplama)
+        final scheduleId = persistentNotificationId + dayOffset * 10 + i + 1;
+
+        try {
+          await _plugin.zonedSchedule(
+            id: scheduleId,
+            title: title,
+            body: '',
+            scheduledDate: tz.TZDateTime.from(atTime, tz.local),
+            notificationDetails: NotificationDetails(
+              android: AndroidNotificationDetails(
+                'persistent_prayer_times',
+                'Yzygiderli wagtlar paneli',
+                channelDescription: 'Namaz wagtlary we galan wagty görkezýär',
+                importance: Importance.low,
+                priority: Priority.low,
+                ongoing: true,
+                autoCancel: false,
+                silent: true,
+                onlyAlertOnce: true,
+                showWhen: true,
+                when: whenMs,
+                usesChronometer: true,
+                chronometerCountDown: true,
+                color: _panelAccent,
+                tag: _panelTag,
+                styleInformation: BigTextStyleInformation(
+                  bodyHtml,
+                  htmlFormatBigText: true,
+                  contentTitle: null,
+                ),
+              ),
+            ),
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          );
+        } catch (e) {
+          debugPrint('panel refresh schedule error ($atKey): $e');
         }
       }
-    }
-
-    if (nearest == null || nearestDay == null) return;
-
-    final atTime = nearest;
-    final dailyTimes = prayerService.getTimesForDate(nearestDay);
-    final activeKey = prayerService.getActivePrayerKey(atTime, offsets);
-    final nextInfo = prayerService.getNextPrayerInfo(atTime, offsets);
-    final nextKey = nextInfo['key'] as String;
-    final nextDt = nextInfo['dateTime'] as DateTime;
-    final nextName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
-    final title = _panelTitle(nextName);
-    final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activeKey);
-    final whenMs = nextDt.millisecondsSinceEpoch;
-
-    try {
-      await _plugin.zonedSchedule(
-        id: persistentNotificationId,
-        title: title,
-        body: '',
-        scheduledDate: tz.TZDateTime.from(atTime, tz.local),
-        notificationDetails: NotificationDetails(
-          android: _persistentDetails(bodyHtml: bodyHtml, whenMs: whenMs),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
-    } catch (e) {
-      debugPrint('panel refresh schedule error: $e');
     }
   }
 
   Future<void> _cancelPanelRefreshes() async {
+    // Ana panel bildirimi
     await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
+    // Planlanmış panel yenilemeleri (ID aralığı: 8889 - 8910)
+    for (var i = 1; i <= 22; i++) {
+      try {
+        await _plugin.cancel(id: persistentNotificationId + i, tag: _panelTag);
+      } catch (_) {}
+    }
   }
 
   Future<void> _cancelScheduledAlerts() async {
