@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import '../providers/app_state.dart';
 import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
@@ -44,24 +45,53 @@ class _TasbihScreenState extends State<TasbihScreen> with SingleTickerProviderSt
     // Check if target is met before incrementing
     final countBefore = widget.appState.zikirCount;
     final target = widget.appState.zikirTarget;
-    
+
     widget.appState.incrementZikir();
-    
+
     final countAfter = countBefore + 1;
 
     // Haptic feedback
     if (target > 0 && countAfter % target == 0) {
-      // Güçlü üçlü titreşim — 33, 66, 99... hedefine ulaşıldığında
-      HapticFeedback.heavyImpact();
-      Future.delayed(const Duration(milliseconds: 120), () {
-        HapticFeedback.heavyImpact();
-      });
-      Future.delayed(const Duration(milliseconds: 280), () {
-        HapticFeedback.heavyImpact();
-      });
+      // Güçlü motor titreşim — 33, 66, 99... hedefine ulaşıldığında
+      // vibration paketi gerçek Android/iOS vibrasyon motorunu çalıştırır
+      _triggerCompletionVibration();
       _showTargetReachedDialog();
     } else {
+      // Normal dokunma: hafif geri bildirim
       HapticFeedback.lightImpact();
+    }
+  }
+
+  /// 33'e ulaşınca üçlü güçlü titreşim patternı
+  Future<void> _triggerCompletionVibration() async {
+    // Önce HapticFeedback ile anında geri bildirim
+    HapticFeedback.heavyImpact();
+
+    final hasVibrator = await Vibration.hasVibrator();
+    if (!hasVibrator) {
+      // Vibrator yoksa HapticFeedback ile devam et
+      await Future.delayed(const Duration(milliseconds: 150));
+      HapticFeedback.heavyImpact();
+      await Future.delayed(const Duration(milliseconds: 150));
+      HapticFeedback.heavyImpact();
+      return;
+    }
+
+    final hasAmplitude = await Vibration.hasAmplitudeControl();
+
+    if (hasAmplitude) {
+      // Amplitüdü destekleyen cihazlar: tam güçte 3 kez vur
+      // pattern: [bekleme, süre, bekleme, süre, bekleme, süre]
+      // intensities: [0=sessiz, 255=maksimum]
+      Vibration.vibrate(
+        pattern: [0, 180, 100, 180, 100, 250],
+        intensities: [0, 255, 0, 255, 0, 255],
+      );
+    } else {
+      // Amplitüd yok: basit ardışık titreşim
+      Vibration.vibrate(
+        pattern: [0, 200, 120, 200, 120, 300],
+      );
     }
   }
 

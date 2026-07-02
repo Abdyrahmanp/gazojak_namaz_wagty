@@ -52,7 +52,10 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
       HapticFeedback.vibrate();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(TkTranslations.emailLaunchFailed),
+          content: Text(
+            TkTranslations.emailLaunchFailed,
+            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+          ),
           backgroundColor: Colors.orangeAccent,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

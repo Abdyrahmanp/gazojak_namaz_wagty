@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state.dart';
 import '../utils/email_launcher.dart';
@@ -20,6 +21,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _msgCtrl = TextEditingController();
+  bool _batteryDismissed = false;
+  bool _batteryExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBatteryDismissed();
+  }
+
+  Future<void> _loadBatteryDismissed() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _batteryDismissed = prefs.getBool('battery_warning_dismissed') ?? false;
+      });
+    }
+  }
+
+  Future<void> _dismissBatteryWarning() async {
+    HapticFeedback.mediumImpact();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('battery_warning_dismissed', true);
+    if (mounted) setState(() => _batteryDismissed = true);
+  }
 
   @override
   void dispose() {
@@ -54,7 +79,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       HapticFeedback.vibrate();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(TkTranslations.emailLaunchFailed),
+          content: Text(
+            TkTranslations.emailLaunchFailed,
+            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+          ),
           backgroundColor: Colors.orangeAccent,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -272,72 +300,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 25),
 
-              // Batarya Optimizasyon Uyarısı
-              Text('Bildirişler', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: isDark ? 0.08 : 0.06),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.battery_alert_rounded, color: Colors.orange, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              TkTranslations.batteryOptTitle,
-                              style: tt.titleMedium?.copyWith(
-                                color: tc,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+              // Batarya Optimizasyon Uyarısı — gizlenmediyse göster
+              if (!_batteryDismissed) ...[
+                Text('Bildirişler', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: isDark ? 0.08 : 0.06),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+                  ),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                      childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+                      initiallyExpanded: _batteryExpanded,
+                      onExpansionChanged: (v) => setState(() => _batteryExpanded = v),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.battery_alert_rounded, color: Colors.orange, size: 20),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        TkTranslations.batteryOptMessage,
-                        style: tt.bodySmall?.copyWith(
-                          color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                          height: 1.55,
+                      title: Text(
+                        TkTranslations.batteryOptTitle,
+                        style: tt.titleMedium?.copyWith(
+                          color: tc,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _openBatterySettings,
-                          icon: const Icon(Icons.settings_outlined, size: 18),
-                          label: Text(TkTranslations.batteryOptCheck,
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                      iconColor: Colors.orange,
+                      collapsedIconColor: Colors.orange.withValues(alpha: 0.7),
+                      children: [
+                        Text(
+                          TkTranslations.batteryOptMessage,
+                          style: tt.bodySmall?.copyWith(
+                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                            height: 1.55,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _openBatterySettings,
+                            icon: const Icon(Icons.settings_outlined, size: 18),
+                            label: Text(TkTranslations.batteryOptCheck,
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _dismissBatteryWarning,
+                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.emeraldGreen),
+                            label: const Text(
+                              'Sazlamany etdim, ýap',
+                              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.emeraldGreen),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.emeraldGreen),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 25),
+                const SizedBox(height: 25),
+              ],
 
               // About + Legal + Contact Support
               Text('Maglumat', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
@@ -576,7 +620,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Sahypa açylmady. Internet baglanyşygyny barlaň.'),
+          content: Text(
+            'Sahypa açylmady. Internet baglanyşygyny barlaň.',
+            style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+          ),
           backgroundColor: Colors.orangeAccent,
         ),
       );
@@ -589,44 +636,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool opened = false;
 
     // 1. Önce: REQUEST_IGNORE_BATTERY_OPTIMIZATIONS — doğrudan bu uygulamayı muaf et
+    //    canLaunchUrl KULLANMA — Android 11+ (API 30+) paket görünürlük kısıtlaması
+    //    nedeniyle canLaunchUrl false döner. Direkt launchUrl + try-catch yeterli.
     try {
       final reqUri = Uri(
         scheme: 'android.settings',
         host: 'REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
         path: '/$packageName',
       );
-      if (await canLaunchUrl(reqUri)) {
-        await launchUrl(reqUri, mode: LaunchMode.externalApplication);
-        opened = true;
-      }
+      await launchUrl(reqUri, mode: LaunchMode.externalApplication);
+      opened = true;
     } catch (_) {}
 
     // 2. Fallback: Genel batarya optimizasyon ekranı
     if (!opened) {
       try {
-        final generalUri = Uri(
-          scheme: 'android.settings',
-          host: 'IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
-        );
-        if (await canLaunchUrl(generalUri)) {
-          await launchUrl(generalUri, mode: LaunchMode.externalApplication);
-          opened = true;
-        }
+        final generalUri = Uri.parse('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
+        await launchUrl(generalUri, mode: LaunchMode.externalApplication);
+        opened = true;
       } catch (_) {}
     }
 
-    // 3. Son çare: Uygulamanın uygulama bilgisi ekranı
+    // 3. Fallback: ACTION_APPLICATION_DETAILS_SETTINGS — uygulama detay sayfası
+    //    Kullanıcı oradan el ile Batarya > Çäklendirmesiz seçebilir
     if (!opened) {
       try {
         final appInfoUri = Uri(
           scheme: 'android.settings',
           host: 'APPLICATION_DETAILS_SETTINGS',
+          queryParameters: {'package': packageName},
+        );
+        await launchUrl(appInfoUri, mode: LaunchMode.externalApplication);
+        opened = true;
+      } catch (_) {}
+    }
+
+    // 4. Son çare: URI şeması olmadan settings intent
+    if (!opened) {
+      try {
+        final appInfoUri2 = Uri(
+          scheme: 'android.settings',
+          host: 'APPLICATION_DETAILS_SETTINGS',
           path: '/$packageName',
         );
-        if (await canLaunchUrl(appInfoUri)) {
-          await launchUrl(appInfoUri, mode: LaunchMode.externalApplication);
-          opened = true;
-        }
+        await launchUrl(appInfoUri2, mode: LaunchMode.externalApplication);
+        opened = true;
       } catch (_) {}
     }
 
@@ -635,7 +689,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(
           content: const Text(
             'Sazlamalar → Programmalar → Gazojak → Batarýa bölümine giń we "Çäklendirmesiz" saýla.',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.orange,
           duration: const Duration(seconds: 6),
@@ -755,7 +809,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (remoteInfo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(TkTranslations.checkUpdateFailed),
+          content: const Text(
+            TkTranslations.checkUpdateFailed,
+            style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+          ),
           backgroundColor: Colors.orangeAccent,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

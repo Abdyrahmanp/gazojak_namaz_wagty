@@ -126,7 +126,8 @@ class NotificationService {
           '<font color="$_greenHtml"><b>$line (şu wagt)</b></font>',
         );
       } else {
-        lines.add(line);
+        // Koyu ve açık modda görünmesi için sabit renk — #CBD5E1
+        lines.add('<font color="#CBD5E1">$line</font>');
       }
     }
     return lines.join('<br/>');
@@ -323,12 +324,12 @@ class NotificationService {
         final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activeKey);
         final whenMs = nextDt.millisecondsSinceEpoch;
 
-        // Her vakit için farklı ID kullan (tag ile gruplama)
-        final scheduleId = persistentNotificationId + dayOffset * 10 + i + 1;
-
+        // ÖNEMLİ: Aynı ID (8888) + aynı tag kullan.
+        // Android'de aynı ID+tag = mevcut bildirimi günceller, yeni bildirim oluşturmaz.
+        // Böylece çift bildirim paneli sorunu ortadan kalkar.
         try {
           await _plugin.zonedSchedule(
-            id: scheduleId,
+            id: persistentNotificationId,   // Hep 8888 — overwrite eder
             title: title,
             body: '',
             scheduledDate: tz.TZDateTime.from(atTime, tz.local),
@@ -365,21 +366,23 @@ class NotificationService {
     }
   }
 
-  /// Sadece gelecekte planlanmış panel yenileme bildirimlerini iptal eder.
-  /// Ana panel (ID 8888) bu fonksiyon tarafından iptal EDİLMEZ.
+  /// Planlanmış panel yenileme bildirimlerini iptal eder.
+  /// Artık hepsi aynı ID (8888) kullandığından, tek cancel yeterli.
+  /// Ana panel (ID 8888) bu fonksiyon tarafından iptal EDİLMEZ —
+  /// zira zonedSchedule henüz tetiklenmemiş bir future bildirimi iptal eder,
+  /// aktif ongoing bildirimi etkilemez.
   Future<void> _cancelScheduledPanelRefreshes() async {
-    for (var i = 1; i <= 22; i++) {
-      try {
-        await _plugin.cancel(id: persistentNotificationId + i, tag: _panelTag);
-      } catch (_) {}
-    }
+    // Aynı ID+tag kullandığımız için tek bir cancel pending future schedule'ı siler.
+    // (Android'de pending bir zonedSchedule cancel edilebilir ID/tag ile.)
+    try {
+      await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
+    } catch (_) {}
   }
 
   /// Hem ana paneli hem tüm planlanmış yenilemeleri iptal eder.
   /// Sadece kullanıcı 'paneli kapat' dediğinde çağrılmalı.
   Future<void> _cancelAllPanelNotifications() async {
     await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
-    await _cancelScheduledPanelRefreshes();
   }
 
   Future<void> _cancelScheduledAlerts() async {
