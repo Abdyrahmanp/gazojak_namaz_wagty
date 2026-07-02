@@ -65,9 +65,12 @@ class _FaqScreenState extends State<FaqScreen> {
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+                Icon(Icons.check_circle_outline_rounded, color: Color(0xFFCBD5E1)),
                 SizedBox(width: 8),
-                Text(TkTranslations.faqSyncSuccess),
+                Text(
+                  TkTranslations.faqSyncSuccess,
+                  style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             backgroundColor: AppColors.emeraldGreen,
@@ -84,9 +87,12 @@ class _FaqScreenState extends State<FaqScreen> {
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.cloud_off_rounded, color: Colors.white),
+                Icon(Icons.cloud_off_rounded, color: Color(0xFFCBD5E1)),
                 SizedBox(width: 8),
-                Text(TkTranslations.faqSyncFailed),
+                Text(
+                  TkTranslations.faqSyncFailed,
+                  style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             backgroundColor: Colors.orangeAccent,
@@ -381,7 +387,10 @@ class _FaqScreenState extends State<FaqScreen> {
                         HapticFeedback.vibrate();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(TkTranslations.emailLaunchFailed),
+                            content: Text(
+                              TkTranslations.emailLaunchFailed,
+                              style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+                            ),
                             backgroundColor: Colors.orangeAccent,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

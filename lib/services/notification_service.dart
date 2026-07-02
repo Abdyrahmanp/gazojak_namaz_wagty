@@ -126,7 +126,7 @@ class NotificationService {
           '<font color="$_greenHtml"><b>$line (şu wagt)</b></font>',
         );
       } else {
-        lines.add(line);
+        lines.add('<font color="#CBD5E1">$line</font>');
       }
     }
     return lines.join('<br/>');

@@ -128,6 +128,8 @@ class AppState extends ChangeNotifier {
     final selectedDate = _selectedDate;
     final service = prayerService;
 
+    // For showing the active prayer and mekruh on the selected date,
+    // we use a datetime that has today's clock but the selected date's calendar.
     final targetDateTime = DateTime(
       selectedDate.year,
       selectedDate.month,
@@ -138,10 +140,16 @@ class AppState extends ChangeNotifier {
     );
 
     final activeKey = service.getActivePrayerKey(targetDateTime, _offsets);
-    final nextInfo = service.getNextPrayerInfo(targetDateTime, _offsets);
+
+    // Always compute next prayer from real now to prevent negative countdowns
+    // when returning to the app or during state transitions.
+    final nextInfo = service.getNextPrayerInfo(now, _offsets);
     final nextKey = nextInfo['key'] as String;
     final nextDateTime = nextInfo['dateTime'] as DateTime;
-    final difference = nextDateTime.difference(targetDateTime);
+
+    // Clamp to zero to prevent negative display during brief timing gaps
+    final rawDiff = nextDateTime.difference(now);
+    final difference = rawDiff.isNegative ? Duration.zero : rawDiff;
 
     final hours = difference.inHours;
     final minutes = difference.inMinutes.remainder(60);
