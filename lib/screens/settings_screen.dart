@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state.dart';
 import '../utils/email_launcher.dart';
 import '../utils/colors.dart';
@@ -22,7 +23,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _nameCtrl = TextEditingController();
   final _msgCtrl = TextEditingController();
   bool _batteryDismissed = false;
+<<<<<<< HEAD
   bool _batteryExpanded = false;
+=======
+>>>>>>> gecici-dal
 
   @override
   void initState() {
@@ -31,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadBatteryDismissed() async {
+<<<<<<< HEAD
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
@@ -44,6 +49,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('battery_warning_dismissed', true);
     if (mounted) setState(() => _batteryDismissed = true);
+=======
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _batteryDismissed = prefs.getBool('battery_warning_dismissed') ?? false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _dismissBatteryWarning() async {
+    HapticFeedback.selectionClick();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('battery_warning_dismissed', true);
+      setState(() {
+        _batteryDismissed = true;
+      });
+    } catch (_) {}
+>>>>>>> gecici-dal
   }
 
   @override
@@ -69,7 +93,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       HapticFeedback.mediumImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(TkTranslations.supportSuccess),
+          content: Text(
+            TkTranslations.supportSuccess,
+            style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+          ),
           backgroundColor: AppColors.emeraldGreen,
         ),
       );
@@ -79,9 +106,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       HapticFeedback.vibrate();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+<<<<<<< HEAD
           content: Text(
             TkTranslations.emailLaunchFailed,
             style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+=======
+          content: const Text(
+            TkTranslations.emailLaunchFailed,
+            style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+>>>>>>> gecici-dal
           ),
           backgroundColor: Colors.orangeAccent,
           behavior: SnackBarBehavior.floating,
@@ -117,18 +150,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 // App Icon & Name
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color(0xFF1B5E20),
                     shape: BoxShape.circle,
                   ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/icon/app_icon.png',
-                      width: 44,
-                      height: 44,
-                      fit: BoxFit.cover,
-                    ),
+                  padding: const EdgeInsets.all(8),
+                  child: Image.asset(
+                    'assets/icon/app_icon.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -300,6 +331,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 25),
 
+<<<<<<< HEAD
               // Batarya Optimizasyon Uyarısı — gizlenmediyse göster
               if (!_batteryDismissed) ...[
                 Text('Bildirişler', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
@@ -382,6 +414,97 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 25),
               ],
+=======
+              // Batarya Optimizasyon Uyarısı
+              Text('Bildirişler', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              if (!_batteryDismissed)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: isDark ? 0.08 : 0.06),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+                    ),
+                    child: Theme(
+                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.battery_alert_rounded, color: Colors.orange, size: 20),
+                        ),
+                        title: Text(
+                          TkTranslations.batteryOptTitle,
+                          style: tt.titleMedium?.copyWith(
+                            color: tc,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        iconColor: Colors.orange,
+                        collapsedIconColor: Colors.orange,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  TkTranslations.batteryOptMessage,
+                                  style: tt.bodySmall?.copyWith(
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                    height: 1.55,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _openBatterySettings,
+                                    icon: const Icon(Icons.settings_outlined, size: 18),
+                                    label: Text(TkTranslations.batteryOptCheck,
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _dismissBatteryWarning,
+                                    icon: const Icon(Icons.check_circle_outline_rounded, size: 18, color: Colors.orange),
+                                    label: const Text(
+                                      'Sazlamany etdim, ýap',
+                                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Colors.orange),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 25),
+>>>>>>> gecici-dal
 
               // About + Legal + Contact Support
               Text('Maglumat', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
@@ -688,7 +811,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
+<<<<<<< HEAD
             'Sazlamalar → Programmalar → Gazojak → Batarýa bölümine giń we "Çäklendirmesiz" saýla.',
+=======
+            'Sazlamalar → Programmalar → Gazojak namaz wagty → Batarýa bölümine giriň we "Çäklendirmesiz" saýlaň.',
+>>>>>>> gecici-dal
             style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.orange,

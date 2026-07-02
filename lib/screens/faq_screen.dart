@@ -67,7 +67,14 @@ class _FaqScreenState extends State<FaqScreen> {
               children: [
                 Icon(Icons.check_circle_outline_rounded, color: Color(0xFFCBD5E1)),
                 SizedBox(width: 8),
+<<<<<<< HEAD
                 Text(TkTranslations.faqSyncSuccess, style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold)),
+=======
+                Text(
+                  TkTranslations.faqSyncSuccess,
+                  style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+                ),
+>>>>>>> gecici-dal
               ],
             ),
             backgroundColor: AppColors.emeraldGreen,
@@ -86,7 +93,14 @@ class _FaqScreenState extends State<FaqScreen> {
               children: [
                 Icon(Icons.cloud_off_rounded, color: Color(0xFFCBD5E1)),
                 SizedBox(width: 8),
+<<<<<<< HEAD
                 Text(TkTranslations.faqSyncFailed, style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold)),
+=======
+                Text(
+                  TkTranslations.faqSyncFailed,
+                  style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+                ),
+>>>>>>> gecici-dal
               ],
             ),
             backgroundColor: Colors.orangeAccent,

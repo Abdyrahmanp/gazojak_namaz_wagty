@@ -126,7 +126,10 @@ class NotificationService {
           '<font color="$_greenHtml"><b>$line (şu wagt)</b></font>',
         );
       } else {
+<<<<<<< HEAD
         // Koyu ve açık modda görünmesi için sabit renk — #CBD5E1
+=======
+>>>>>>> gecici-dal
         lines.add('<font color="#CBD5E1">$line</font>');
       }
     }

@@ -52,9 +52,14 @@ class _TasbihScreenState extends State<TasbihScreen> with SingleTickerProviderSt
 
     // Haptic feedback
     if (target > 0 && countAfter % target == 0) {
+<<<<<<< HEAD
       // Güçlü motor titreşim — 33, 66, 99... hedefine ulaşıldığında
       // vibration paketi gerçek Android/iOS vibrasyon motorunu çalıştırır
       _triggerCompletionVibration();
+=======
+      // Güçlü tek titreşim — hedef tamamlandığında (33, 66, 99...)
+      _triggerTargetVibration();
+>>>>>>> gecici-dal
       _showTargetReachedDialog();
     } else {
       // Normal dokunma: hafif geri bildirim
@@ -96,12 +101,33 @@ class _TasbihScreenState extends State<TasbihScreen> with SingleTickerProviderSt
   }
 
 
+  Future<void> _triggerTargetVibration() async {
+    try {
+      final hasVibrator = await Vibration.hasVibrator();
+      if (hasVibrator) {
+        final hasAmplitude = await Vibration.hasAmplitudeControl();
+        if (hasAmplitude) {
+          // Single strong pulse: 400ms at max amplitude
+          Vibration.vibrate(duration: 400, amplitude: 255);
+        } else {
+          // Fallback for devices without amplitude control
+          Vibration.vibrate(duration: 400);
+        }
+      } else {
+        // Last resort: system haptic
+        HapticFeedback.heavyImpact();
+      }
+    } catch (_) {
+      HapticFeedback.heavyImpact();
+    }
+  }
+
   void _showTargetReachedDialog() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           "${TkTranslations.shortDhikrs[widget.appState.selectedZikirIndex]} zikri ${widget.appState.zikirTarget} gezek gaýtalandy!",
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFCBD5E1)),
         ),
         backgroundColor: AppColors.emeraldGreen,
         duration: const Duration(seconds: 2),

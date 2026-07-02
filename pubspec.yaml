@@ -102,5 +102,9 @@ flutter_launcher_icons:
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
   adaptive_icon_background: "#1B5E20"
+<<<<<<< HEAD
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+=======
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+>>>>>>> gecici-dal
   remove_alpha_ios: true
