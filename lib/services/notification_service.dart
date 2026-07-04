@@ -26,7 +26,6 @@ class NotificationService {
 
   static const int persistentNotificationId = 8888;
   static const int alertBaseId = 1000;
-  static const String _panelTag = 'gazojak_prayer_panel';
   static const Color _panelAccent = Color(0xFF2E7D32);
   static const String _greenHtml = '#43A047';
 
@@ -76,9 +75,13 @@ class NotificationService {
       await _plugin.initialize(
         settings: initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          // If the user taps the persistent panel notification, immediately
-          // re-show it so it never disappears from the notification shade.
-          if (response.id == persistentNotificationId) {
+          // Re-show the active panel if the user taps either the active panel
+          // (8888) or any of the scheduled refresh notifications (8889-8910).
+          final id = response.id ?? -1;
+          final isPanelNotification = id == persistentNotificationId ||
+              (id >= _panelRefreshBaseId &&
+               id < _panelRefreshBaseId + _panelRefreshCount);
+          if (isPanelNotification) {
             onPanelTapped?.call();
           }
         },
@@ -178,10 +181,8 @@ class NotificationService {
       when: whenMs,
       usesChronometer: true,
       chronometerCountDown: true,
-      // Icon kaldırıldı — platform varsayılan ikonu kullanılacak
-      // largeIcon kaldırıldı — sağdaki büyük resim kaldırıldı
       color: _panelAccent,
-      tag: _panelTag,
+      // No tag — using ID alone avoids OEM-specific tag cancel bugs.
       styleInformation: BigTextStyleInformation(
         bodyHtml,
         htmlFormatBigText: true,
@@ -317,12 +318,12 @@ class NotificationService {
     PrayerTimeService prayerService,
     Map<String, int> offsets,
   ) async {
-    // Only cancel scheduled future refreshes — never touch the active panel (8888).
+    // Cancel future scheduled refreshes only — never the active panel (8888).
     await _cancelScheduledPanelRefreshes();
 
     final now = DateTime.now();
 
-    // Schedule panel refresh at each upcoming prayer time (today + tomorrow).
+    // Schedule a panel refresh at each upcoming prayer time (today + tomorrow).
     const prayerKeys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
     int refreshIdOffset = 0;
 
@@ -336,10 +337,8 @@ class NotificationService {
         final atKey = prayerKeys[i];
         final atTime = times[atKey]!;
 
-        // Only schedule future prayer times.
         if (!atTime.isAfter(now)) continue;
 
-        // The active prayer at this moment and the next prayer after it.
         final activeKey = atKey;
         final nextInfo = prayerService.getNextPrayerInfo(
           atTime.add(const Duration(seconds: 1)), offsets);
@@ -351,9 +350,9 @@ class NotificationService {
         final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activeKey);
         final whenMs = nextDt.millisecondsSinceEpoch;
 
-        // Use a unique offset ID (8889, 8890, …) for each scheduled refresh.
-        // This ensures cancelling them with _cancelScheduledPanelRefreshes
-        // does NOT affect the active ongoing panel (ID 8888).
+        // Unique offset IDs (8889, 8890…) so these scheduled refreshes do NOT
+        // overwrite the active ongoing panel (ID 8888). No tag — ID alone is
+        // sufficient and avoids OEM-specific cancel-by-tag bugs.
         final scheduleId = _panelRefreshBaseId + refreshIdOffset;
         refreshIdOffset++;
         if (refreshIdOffset >= _panelRefreshCount) refreshIdOffset = 0;
@@ -380,7 +379,7 @@ class NotificationService {
                 usesChronometer: true,
                 chronometerCountDown: true,
                 color: _panelAccent,
-                tag: _panelTag,
+                // No tag — cancelled by ID only in _cancelScheduledPanelRefreshes.
                 styleInformation: BigTextStyleInformation(
                   bodyHtml,
                   htmlFormatBigText: true,
@@ -404,7 +403,7 @@ class NotificationService {
         id < _panelRefreshBaseId + _panelRefreshCount;
         id++) {
       try {
-        await _plugin.cancel(id: id, tag: _panelTag);
+        await _plugin.cancel(id: id); // No tag needed — ID alone identifies it.
       } catch (_) {}
     }
   }
@@ -412,11 +411,9 @@ class NotificationService {
   /// Cancels the active ongoing panel (8888) AND all scheduled refreshes (8889-8910).
   /// Only call when the user explicitly disables the feature in settings.
   Future<void> _cancelAllPanelNotifications() async {
-    // Cancel active panel
     try {
-      await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
+      await _plugin.cancel(id: persistentNotificationId); // No tag needed.
     } catch (_) {}
-    // Cancel scheduled refreshes
     await _cancelScheduledPanelRefreshes();
   }
 

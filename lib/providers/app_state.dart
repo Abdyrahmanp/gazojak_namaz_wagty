@@ -199,39 +199,32 @@ class AppState extends ChangeNotifier {
     if (!prayerService.isLoaded) return;
 
     final now = DateTime.now();
-    final selectedDate = _selectedDate;
-    final isShowingToday = selectedDate.year == now.year &&
-        selectedDate.month == now.month &&
-        selectedDate.day == now.day;
-    if (!isShowingToday) return;
-
     final service = prayerService;
-    final targetDateTime = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day,
-      now.hour,
-      now.minute,
-      now.second,
-    );
-    final nextInfo = service.getNextPrayerInfo(targetDateTime, _offsets);
+
+    // Always compute persistent panel info based on real "now" so the
+    // status bar notification is always correct for today, even when
+    // the user is browsing other calendar dates in the app UI.
+    final nextInfo = service.getNextPrayerInfo(now, _offsets);
     final nextKey = nextInfo['key'] as String;
     final nextDateTime = nextInfo['dateTime'] as DateTime;
     final whenMs = nextDateTime.millisecondsSinceEpoch;
-    // nextKey dahil ederek namazdan namaza geçişte panel güncellenir
-    final panelState = '${whenMs}_${_activePrayerKey}_$nextKey';
+
+    final activeKey = service.getActivePrayerKey(now, _offsets);
+
+    final panelState = '${whenMs}_${activeKey}_$nextKey';
     if (panelState == '${_lastPanelWhenMs}_${_lastPanelActiveKey}_$_lastPanelNextKey') return;
     _lastPanelWhenMs = whenMs;
-    _lastPanelActiveKey = _activePrayerKey;
+    _lastPanelActiveKey = activeKey;
     _lastPanelNextKey = nextKey;
 
-    final dailyTimes = service.getTimesForDate(selectedDate);
+    final todayDate = DateTime(now.year, now.month, now.day);
+    final dailyTimes = service.getTimesForDate(todayDate);
     NotificationService().showPersistentNotification(
       nextPrayerKey: nextKey,
       nextPrayerDateTime: nextDateTime,
       dailyTimes: dailyTimes,
       offsets: _offsets,
-      activePrayerKey: _activePrayerKey,
+      activePrayerKey: activeKey,
     );
   }
 
