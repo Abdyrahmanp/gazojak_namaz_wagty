@@ -306,17 +306,25 @@ class NotificationService {
     }
   }
 
+  // IDs 8889-8910: reserved for scheduled panel refresh notifications.
+  // The active ongoing panel always uses persistentNotificationId (8888).
+  // Keeping them separate prevents _cancelScheduledPanelRefreshes from
+  // accidentally killing the visible panel.
+  static const int _panelRefreshBaseId = 8889;
+  static const int _panelRefreshCount = 22; // 6 prayers × 2 days + spare
+
   Future<void> _schedulePanelRefreshes(
     PrayerTimeService prayerService,
     Map<String, int> offsets,
   ) async {
-    // Sadece planlı yenilemeleri iptal et — aktif panel bildirimi kaybolmasın
+    // Only cancel scheduled future refreshes — never touch the active panel (8888).
     await _cancelScheduledPanelRefreshes();
 
     final now = DateTime.now();
 
-    // Her namaz vakti için panel yenileme planla (today + tomorrow)
+    // Schedule panel refresh at each upcoming prayer time (today + tomorrow).
     const prayerKeys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
+    int refreshIdOffset = 0;
 
     for (final dayOffset in [0, 1]) {
       final date = now.add(Duration(days: dayOffset));
@@ -328,13 +336,13 @@ class NotificationService {
         final atKey = prayerKeys[i];
         final atTime = times[atKey]!;
 
-        // Sadece gelecekteki vakitler için planla
+        // Only schedule future prayer times.
         if (!atTime.isAfter(now)) continue;
 
-        // O vakit başladığında aktif namaz bu olacak
+        // The active prayer at this moment and the next prayer after it.
         final activeKey = atKey;
-        // Sonraki namazı bul
-        final nextInfo = prayerService.getNextPrayerInfo(atTime.add(const Duration(seconds: 1)), offsets);
+        final nextInfo = prayerService.getNextPrayerInfo(
+          atTime.add(const Duration(seconds: 1)), offsets);
         final nextKey = nextInfo['key'] as String;
         final nextDt = nextInfo['dateTime'] as DateTime;
 
@@ -343,12 +351,16 @@ class NotificationService {
         final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activeKey);
         final whenMs = nextDt.millisecondsSinceEpoch;
 
-        // ÖNEMLİ: Aynı ID (8888) + aynı tag kullan.
-        // Android'de aynı ID+tag = mevcut bildirimi günceller, yeni bildirim oluşturmaz.
-        // Böylece çift bildirim paneli sorunu ortadan kalkar.
+        // Use a unique offset ID (8889, 8890, …) for each scheduled refresh.
+        // This ensures cancelling them with _cancelScheduledPanelRefreshes
+        // does NOT affect the active ongoing panel (ID 8888).
+        final scheduleId = _panelRefreshBaseId + refreshIdOffset;
+        refreshIdOffset++;
+        if (refreshIdOffset >= _panelRefreshCount) refreshIdOffset = 0;
+
         try {
           await _plugin.zonedSchedule(
-            id: persistentNotificationId,   // Hep 8888 — overwrite eder
+            id: scheduleId,
             title: title,
             body: '',
             scheduledDate: tz.TZDateTime.from(atTime, tz.local),
@@ -379,29 +391,33 @@ class NotificationService {
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );
         } catch (e) {
-          debugPrint('panel refresh schedule error ($atKey): $e');
+          debugPrint('panel refresh schedule error ($atKey, id=$scheduleId): $e');
         }
       }
     }
   }
 
-  /// Planlanmış panel yenileme bildirimlerini iptal eder.
-  /// Artık hepsi aynı ID (8888) kullandığından, tek cancel yeterli.
-  /// Ana panel (ID 8888) bu fonksiyon tarafından iptal EDİLMEZ —
-  /// zira zonedSchedule henüz tetiklenmemiş bir future bildirimi iptal eder,
-  /// aktif ongoing bildirimi etkilemez.
+  /// Cancels only the scheduled future panel refresh notifications (IDs 8889-8910).
+  /// The active ongoing panel (ID 8888) is intentionally NOT touched here.
   Future<void> _cancelScheduledPanelRefreshes() async {
-    // Aynı ID+tag kullandığımız için tek bir cancel pending future schedule'ı siler.
-    // (Android'de pending bir zonedSchedule cancel edilebilir ID/tag ile.)
+    for (var id = _panelRefreshBaseId;
+        id < _panelRefreshBaseId + _panelRefreshCount;
+        id++) {
+      try {
+        await _plugin.cancel(id: id, tag: _panelTag);
+      } catch (_) {}
+    }
+  }
+
+  /// Cancels the active ongoing panel (8888) AND all scheduled refreshes (8889-8910).
+  /// Only call when the user explicitly disables the feature in settings.
+  Future<void> _cancelAllPanelNotifications() async {
+    // Cancel active panel
     try {
       await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
     } catch (_) {}
-  }
-
-  /// Hem ana paneli hem tüm planlanmış yenilemeleri iptal eder.
-  /// Sadece kullanıcı 'paneli kapat' dediğinde çağrılmalı.
-  Future<void> _cancelAllPanelNotifications() async {
-    await _plugin.cancel(id: persistentNotificationId, tag: _panelTag);
+    // Cancel scheduled refreshes
+    await _cancelScheduledPanelRefreshes();
   }
 
   Future<void> _cancelScheduledAlerts() async {

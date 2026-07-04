@@ -122,8 +122,12 @@ class AppState extends ChangeNotifier {
 
   Future<void> refreshOnResume() async {
     if (!_isReady) return;
+    // Reset all three cached state keys so _updatePersistentPanel always
+    // re-shows the panel immediately when resuming from background or
+    // when the notification is tapped.
     _lastPanelWhenMs = null;
     _lastPanelActiveKey = null;
+    _lastPanelNextKey = null;
     _computePrayerState();
     try {
       await _rescheduleNotifications();

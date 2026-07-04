@@ -636,58 +636,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openBatterySettings() async {
     HapticFeedback.selectionClick();
     const packageName = 'com.example.gazojak_namaz_wagty';
-    bool opened = false;
+    const channel = MethodChannel('com.example.gazojak_namaz_wagty/battery');
 
-    // 1. Önce: REQUEST_IGNORE_BATTERY_OPTIMIZATIONS — doğrudan bu uygulamayı muaf et
-    //    canLaunchUrl KULLANMA — Android 11+ (API 30+) paket görünürlük kısıtlaması
-    //    nedeniyle canLaunchUrl false döner. Direkt launchUrl + try-catch yeterli.
     try {
-      final reqUri = Uri(
-        scheme: 'android.settings',
-        host: 'REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-        path: '/$packageName',
-      );
-      await launchUrl(reqUri, mode: LaunchMode.externalApplication);
-      opened = true;
-    } catch (_) {}
-
-    // 2. Fallback: Genel batarya optimizasyon ekranı
-    if (!opened) {
-      try {
-        final generalUri = Uri.parse('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
-        await launchUrl(generalUri, mode: LaunchMode.externalApplication);
-        opened = true;
-      } catch (_) {}
-    }
-
-    // 3. Fallback: ACTION_APPLICATION_DETAILS_SETTINGS — uygulama detay sayfası
-    //    Kullanıcı oradan el ile Batarya > Çäklendirmesiz seçebilir
-    if (!opened) {
-      try {
-        final appInfoUri = Uri(
-          scheme: 'android.settings',
-          host: 'APPLICATION_DETAILS_SETTINGS',
-          queryParameters: {'package': packageName},
-        );
-        await launchUrl(appInfoUri, mode: LaunchMode.externalApplication);
-        opened = true;
-      } catch (_) {}
-    }
-
-    // 4. Son çare: URI şeması olmadan settings intent
-    if (!opened) {
-      try {
-        final appInfoUri2 = Uri(
-          scheme: 'android.settings',
-          host: 'APPLICATION_DETAILS_SETTINGS',
-          path: '/$packageName',
-        );
-        await launchUrl(appInfoUri2, mode: LaunchMode.externalApplication);
-        opened = true;
-      } catch (_) {}
-    }
-
-    if (!opened && mounted) {
+      // Use native Android Intent via MethodChannel — this works on all Android
+      // versions including Android 11+ where url_launcher schemes fail due to
+      // package visibility restrictions (canLaunchUrl returns false).
+      await channel.invokeMethod('openBatteryOptimization', {'package': packageName});
+    } catch (e) {
+      // MethodChannel failed — show manual instructions as fallback
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
