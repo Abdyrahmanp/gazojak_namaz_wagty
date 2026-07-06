@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/prayer_time_service.dart';
 import '../services/notification_service.dart';
+import '../utils/agent_debug_log.dart';
 
 class AppState extends ChangeNotifier {
   final PrayerTimeService prayerService = PrayerTimeService();
@@ -212,7 +213,24 @@ class AppState extends ChangeNotifier {
     final activeKey = service.getActivePrayerKey(now, _offsets);
 
     final panelState = '${whenMs}_${activeKey}_$nextKey';
-    if (panelState == '${_lastPanelWhenMs}_${_lastPanelActiveKey}_$_lastPanelNextKey') return;
+    if (panelState == '${_lastPanelWhenMs}_${_lastPanelActiveKey}_$_lastPanelNextKey') {
+      return;
+    }
+    // #region agent log
+    agentDebugLog(
+      location: 'app_state.dart:_updatePersistentPanel',
+      message: 'panel state changed, updating notification',
+      hypothesisId: 'D',
+      data: {
+        'activeKey': activeKey,
+        'nextKey': nextKey,
+        'whenMs': whenMs,
+        'previousActiveKey': _lastPanelActiveKey,
+        'previousNextKey': _lastPanelNextKey,
+      },
+      runId: 'post-fix',
+    );
+    // #endregion
     _lastPanelWhenMs = whenMs;
     _lastPanelActiveKey = activeKey;
     _lastPanelNextKey = nextKey;
@@ -225,6 +243,10 @@ class AppState extends ChangeNotifier {
       dailyTimes: dailyTimes,
       offsets: _offsets,
       activePrayerKey: activeKey,
+    );
+    NotificationService().rescheduleNextPanelRefresh(
+      prayerService: service,
+      offsets: _offsets,
     );
   }
 

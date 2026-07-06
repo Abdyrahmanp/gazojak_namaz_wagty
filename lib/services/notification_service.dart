@@ -5,6 +5,7 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import '../models/prayer_time.dart';
 import '../services/prayer_time_service.dart';
+import '../utils/agent_debug_log.dart';
 import '../utils/tk_translations.dart';
 
 /// Top-level function required by flutter_local_notifications for background
@@ -82,6 +83,14 @@ class NotificationService {
               (id >= _panelRefreshBaseId &&
                id < _panelRefreshBaseId + _panelRefreshCount);
           if (isPanelNotification) {
+            // #region agent log
+            agentDebugLog(
+              location: 'notification_service.dart:onPanelTap',
+              message: 'panel notification tapped',
+              hypothesisId: 'E',
+              data: {'id': id},
+            );
+            // #endregion
             onPanelTapped?.call();
           }
         },
@@ -208,6 +217,22 @@ class NotificationService {
     final whenMs = nextPrayerDateTime.millisecondsSinceEpoch;
 
     try {
+      // Remove any legacy duplicate panel notifications (old 8889-8910 approach).
+      await _cancelScheduledPanelRefreshes();
+      // #region agent log
+      agentDebugLog(
+        location: 'notification_service.dart:showPersistentNotification',
+        message: 'showing active panel on id 8888',
+        hypothesisId: 'B',
+        data: {
+          'notificationId': persistentNotificationId,
+          'activePrayerKey': activePrayerKey,
+          'nextPrayerKey': nextPrayerKey,
+          'whenMs': whenMs,
+        },
+        runId: 'post-fix',
+      );
+      // #endregion
       await _plugin.show(
         id: persistentNotificationId,
         title: title,
@@ -307,25 +332,36 @@ class NotificationService {
     }
   }
 
-  // IDs 8889-8910: reserved for scheduled panel refresh notifications.
-  // The active ongoing panel always uses persistentNotificationId (8888).
-  // Keeping them separate prevents _cancelScheduledPanelRefreshes from
-  // accidentally killing the visible panel.
+  // Legacy IDs 8889-8910 from an older approach that caused duplicate panels.
+  // Still cancelled on startup/show to clean up devices that already have them.
   static const int _panelRefreshBaseId = 8889;
-  static const int _panelRefreshCount = 22; // 6 prayers × 2 days + spare
+  static const int _panelRefreshCount = 22;
+
+  /// Reschedule only the next panel refresh (used after prayer transitions).
+  Future<void> rescheduleNextPanelRefresh({
+    required PrayerTimeService prayerService,
+    required Map<String, int> offsets,
+  }) async {
+    if (!_isAndroid) return;
+    if (!_isInitialized) await initialize();
+    if (!prayerService.isLoaded) return;
+    await _schedulePanelRefreshes(prayerService, offsets);
+  }
 
   Future<void> _schedulePanelRefreshes(
     PrayerTimeService prayerService,
     Map<String, int> offsets,
   ) async {
-    // Cancel future scheduled refreshes only — never the active panel (8888).
     await _cancelScheduledPanelRefreshes();
 
     final now = DateTime.now();
-
-    // Schedule a panel refresh at each upcoming prayer time (today + tomorrow).
     const prayerKeys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
-    int refreshIdOffset = 0;
+
+    DateTime? nearestAtTime;
+    String? nearestActiveKey;
+    String? nearestNextKey;
+    DateTime? nearestNextDt;
+    PrayerTime? nearestDailyTimes;
 
     for (final dayOffset in [0, 1]) {
       final date = now.add(Duration(days: dayOffset));
@@ -333,72 +369,85 @@ class NotificationService {
       final dayDate = DateTime(date.year, date.month, date.day);
       final dailyTimes = prayerService.getTimesForDate(dayDate);
 
-      for (var i = 0; i < prayerKeys.length; i++) {
-        final atKey = prayerKeys[i];
+      for (final atKey in prayerKeys) {
         final atTime = times[atKey]!;
-
         if (!atTime.isAfter(now)) continue;
 
-        final activeKey = atKey;
-        final nextInfo = prayerService.getNextPrayerInfo(
-          atTime.add(const Duration(seconds: 1)), offsets);
-        final nextKey = nextInfo['key'] as String;
-        final nextDt = nextInfo['dateTime'] as DateTime;
-
-        final nextPrayerName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
-        final title = _panelTitle(nextKey, nextPrayerName);
-        final bodyHtml = _buildPanelBodyHtml(dailyTimes, offsets, activeKey);
-        final whenMs = nextDt.millisecondsSinceEpoch;
-
-        // Unique offset IDs (8889, 8890…) so these scheduled refreshes do NOT
-        // overwrite the active ongoing panel (ID 8888). No tag — ID alone is
-        // sufficient and avoids OEM-specific cancel-by-tag bugs.
-        final scheduleId = _panelRefreshBaseId + refreshIdOffset;
-        refreshIdOffset++;
-        if (refreshIdOffset >= _panelRefreshCount) refreshIdOffset = 0;
-
-        try {
-          await _plugin.zonedSchedule(
-            id: scheduleId,
-            title: title,
-            body: '',
-            scheduledDate: tz.TZDateTime.from(atTime, tz.local),
-            notificationDetails: NotificationDetails(
-              android: AndroidNotificationDetails(
-                'persistent_prayer_times',
-                'Yzygiderli wagtlar paneli',
-                channelDescription: 'Namaz wagtlary we galan wagty görkezýär',
-                importance: Importance.low,
-                priority: Priority.low,
-                ongoing: true,
-                autoCancel: false,
-                silent: true,
-                onlyAlertOnce: true,
-                showWhen: true,
-                when: whenMs,
-                usesChronometer: true,
-                chronometerCountDown: true,
-                color: _panelAccent,
-                // No tag — cancelled by ID only in _cancelScheduledPanelRefreshes.
-                styleInformation: BigTextStyleInformation(
-                  bodyHtml,
-                  htmlFormatBigText: true,
-                  contentTitle: null,
-                ),
-              ),
-            ),
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        if (nearestAtTime == null || atTime.isBefore(nearestAtTime)) {
+          nearestAtTime = atTime;
+          nearestActiveKey = atKey;
+          nearestDailyTimes = dailyTimes;
+          final nextInfo = prayerService.getNextPrayerInfo(
+            atTime.add(const Duration(seconds: 1)),
+            offsets,
           );
-        } catch (e) {
-          debugPrint('panel refresh schedule error ($atKey, id=$scheduleId): $e');
+          nearestNextKey = nextInfo['key'] as String;
+          nearestNextDt = nextInfo['dateTime'] as DateTime;
         }
       }
     }
+
+    if (nearestAtTime == null ||
+        nearestActiveKey == null ||
+        nearestNextKey == null ||
+        nearestNextDt == null ||
+        nearestDailyTimes == null) {
+      return;
+    }
+
+    final nextPrayerName =
+        TkTranslations.prayerNamesShort[nearestNextKey] ?? nearestNextKey;
+    final title = _panelTitle(nearestNextKey, nextPrayerName);
+    final bodyHtml =
+        _buildPanelBodyHtml(nearestDailyTimes, offsets, nearestActiveKey);
+    final whenMs = nearestNextDt.millisecondsSinceEpoch;
+
+    try {
+      // #region agent log
+      agentDebugLog(
+        location: 'notification_service.dart:_schedulePanelRefreshes',
+        message: 'scheduling next panel refresh on same id as active panel',
+        hypothesisId: 'A',
+        data: {
+          'scheduleId': persistentNotificationId,
+          'activeKey': nearestActiveKey,
+          'nextKey': nearestNextKey,
+          'atTime': nearestAtTime.toIso8601String(),
+        },
+        runId: 'post-fix',
+      );
+      // #endregion
+      await _plugin.zonedSchedule(
+        id: persistentNotificationId,
+        title: title,
+        body: '',
+        scheduledDate: tz.TZDateTime.from(nearestAtTime, tz.local),
+        notificationDetails: NotificationDetails(
+          android: _persistentDetails(bodyHtml: bodyHtml, whenMs: whenMs),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (e) {
+      debugPrint(
+        'panel refresh schedule error ($nearestActiveKey, id=$persistentNotificationId): $e',
+      );
+    }
   }
 
-  /// Cancels only the scheduled future panel refresh notifications (IDs 8889-8910).
-  /// The active ongoing panel (ID 8888) is intentionally NOT touched here.
+  /// Cancels legacy duplicate panel notifications (IDs 8889-8910).
   Future<void> _cancelScheduledPanelRefreshes() async {
+    // #region agent log
+    agentDebugLog(
+      location: 'notification_service.dart:_cancelScheduledPanelRefreshes',
+      message: 'cancelling scheduled panel refresh ids 8889-8910',
+      hypothesisId: 'C',
+      data: {
+        'baseId': _panelRefreshBaseId,
+        'count': _panelRefreshCount,
+        'activePanelId': persistentNotificationId,
+      },
+    );
+    // #endregion
     for (var id = _panelRefreshBaseId;
         id < _panelRefreshBaseId + _panelRefreshCount;
         id++) {
@@ -411,6 +460,17 @@ class NotificationService {
   /// Cancels the active ongoing panel (8888) AND all scheduled refreshes (8889-8910).
   /// Only call when the user explicitly disables the feature in settings.
   Future<void> _cancelAllPanelNotifications() async {
+    // #region agent log
+    agentDebugLog(
+      location: 'notification_service.dart:_cancelAllPanelNotifications',
+      message: 'cancelling all panel notifications',
+      hypothesisId: 'E',
+      data: {
+        'activePanelId': persistentNotificationId,
+        'refreshBaseId': _panelRefreshBaseId,
+      },
+    );
+    // #endregion
     try {
       await _plugin.cancel(id: persistentNotificationId); // No tag needed.
     } catch (_) {}
