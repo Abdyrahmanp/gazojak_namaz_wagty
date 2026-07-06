@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/app_state.dart';
 import '../models/faq_item.dart';
@@ -54,11 +55,16 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
         SnackBar(
           content: Text(
             TkTranslations.emailLaunchFailed,
-            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontWeight: FontWeight.bold,
+            ),
           ),
           backgroundColor: Colors.orangeAccent,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -73,9 +79,13 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
         : AppColors.lightBackgroundGradient;
 
     final tc = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final sc = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final sc = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final cardBg = isDark ? AppColors.darkCardBg : AppColors.lightCardBg;
-    final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+    final borderColor = isDark
+        ? AppColors.darkCardBorder
+        : AppColors.lightCardBorder;
 
     return Scaffold(
       body: Container(
@@ -84,7 +94,10 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     IconButton(
@@ -99,7 +112,11 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
                           side: BorderSide(color: borderColor),
                         ),
                       ),
-                      icon: Icon(Icons.arrow_back_ios_new_rounded, color: tc, size: 20),
+                      icon: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: tc,
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -122,7 +139,11 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
                           side: BorderSide(color: borderColor),
                         ),
                       ),
-                      icon: const Icon(Icons.share_rounded, color: AppColors.emeraldGreen, size: 20),
+                      icon: const Icon(
+                        Icons.share_rounded,
+                        color: AppColors.emeraldGreen,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
@@ -130,8 +151,13 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
 
               Expanded(
                 child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: ClampingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -143,10 +169,12 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.emeraldGreen.withValues(alpha: 0.2),
+                              color: AppColors.emeraldGreen.withValues(
+                                alpha: 0.2,
+                              ),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
-                            )
+                            ),
                           ],
                         ),
                         child: Text(
@@ -172,13 +200,56 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              widget.item.answer,
-                              style: TextStyle(
-                                color: tc,
-                                fontSize: 15,
-                                height: 1.7,
-                              ),
+                            MarkdownBody(
+                              data: widget.item.answer,
+                              styleSheet:
+                                  MarkdownStyleSheet.fromTheme(
+                                    Theme.of(context),
+                                  ).copyWith(
+                                    p: TextStyle(
+                                      color: tc,
+                                      fontSize: 15,
+                                      height: 1.7,
+                                    ),
+                                    h1: TextStyle(
+                                      color: tc,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    h2: TextStyle(
+                                      color: tc,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    h3: TextStyle(
+                                      color: tc,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    strong: TextStyle(
+                                      color: tc,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    em: TextStyle(
+                                      color: tc,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    blockquote: TextStyle(
+                                      color: tc,
+                                      fontSize: 15,
+                                      height: 1.7,
+                                    ),
+                                    blockquoteDecoration: BoxDecoration(
+                                      color: AppColors.emeraldGreen.withOpacity(
+                                        0.08,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    listBullet: TextStyle(
+                                      color: tc,
+                                      fontSize: 15,
+                                    ),
+                                  ),
                             ),
                             const SizedBox(height: 20),
                             Divider(color: borderColor),
@@ -187,12 +258,17 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
                               onTap: () => _reportError(context),
                               borderRadius: BorderRadius.circular(12),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                  horizontal: 4,
+                                ),
                                 child: Row(
                                   children: [
                                     Icon(
                                       Icons.error_outline_rounded,
-                                      color: Colors.redAccent.withValues(alpha: 0.8),
+                                      color: Colors.redAccent.withValues(
+                                        alpha: 0.8,
+                                      ),
                                       size: 20,
                                     ),
                                     const SizedBox(width: 10),

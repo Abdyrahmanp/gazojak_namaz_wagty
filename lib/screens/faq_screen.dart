@@ -48,15 +48,17 @@ class _FaqScreenState extends State<FaqScreen> {
 
   Future<void> _syncWithServer({bool silent = false, String? customUrl}) async {
     if (_isUpdating) return;
-    
+
     if (!silent) {
       setState(() {
         _isUpdating = true;
       });
     }
-    
-    final success = await _faqService.updateFaqDataFromServer(customUrl: customUrl);
-    
+
+    final success = await _faqService.updateFaqDataFromServer(
+      customUrl: customUrl,
+    );
+
     if (success) {
       await _loadLocalData();
       if (mounted && !silent) {
@@ -65,17 +67,25 @@ class _FaqScreenState extends State<FaqScreen> {
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.check_circle_outline_rounded, color: Color(0xFFCBD5E1)),
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: Color(0xFFCBD5E1),
+                ),
                 SizedBox(width: 8),
                 Text(
                   TkTranslations.faqSyncSuccess,
-                  style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
             backgroundColor: AppColors.emeraldGreen,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -91,19 +101,24 @@ class _FaqScreenState extends State<FaqScreen> {
                 SizedBox(width: 8),
                 Text(
                   TkTranslations.faqSyncFailed,
-                  style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
             backgroundColor: Colors.orangeAccent,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             margin: const EdgeInsets.all(16),
           ),
         );
       }
     }
-    
+
     if (mounted) {
       setState(() {
         _isUpdating = false;
@@ -114,13 +129,17 @@ class _FaqScreenState extends State<FaqScreen> {
   void _showSyncSettingsDialog() async {
     final currentUrl = await _faqService.getRemoteUrl();
     final urlController = TextEditingController(text: currentUrl);
-    
+
     if (!mounted) return;
     final isDark = widget.appState.isDarkMode;
     final tc = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final sc = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final sc = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final bg = isDark ? AppColors.darkDialogBg : Colors.white;
-    final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+    final borderColor = isDark
+        ? AppColors.darkCardBorder
+        : AppColors.lightCardBorder;
 
     showDialog(
       context: context,
@@ -168,11 +187,7 @@ class _FaqScreenState extends State<FaqScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Ulgamdaky maglumatlary internet arkaly täzelemek üçin aşakdaky çeşme baglanyşygyny üýtgedip bilersiňiz. Täze maglumatlar bu çeşmeden çekilip, offline ýazylar.',
-                  style: TextStyle(
-                    color: sc,
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
+                  style: TextStyle(color: sc, fontSize: 13, height: 1.5),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -181,14 +196,22 @@ class _FaqScreenState extends State<FaqScreen> {
                   decoration: InputDecoration(
                     labelText: 'Maglumat baglanyşygy (JSON URL)',
                     hintText: SiteConfig.faqJsonUrl,
-                    labelStyle: const TextStyle(color: AppColors.emeraldGreen, fontSize: 12),
+                    labelStyle: const TextStyle(
+                      color: AppColors.emeraldGreen,
+                      fontSize: 12,
+                    ),
                     filled: true,
-                    fillColor: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                    fillColor: isDark
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : Colors.black.withValues(alpha: 0.03),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -202,7 +225,11 @@ class _FaqScreenState extends State<FaqScreen> {
                       },
                       child: const Text(
                         'Aslyna gaýtar',
-                        style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                     Row(
@@ -232,9 +259,18 @@ class _FaqScreenState extends State<FaqScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
                           ),
-                          child: const Text('Täzele', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          child: const Text(
+                            'Täzele',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -271,7 +307,8 @@ class _FaqScreenState extends State<FaqScreen> {
   }
 
   String normalizeTurkmenText(String text) {
-    return text.toLowerCase()
+    return text
+        .toLowerCase()
         .replaceAll('ä', 'a')
         .replaceAll('ü', 'u')
         .replaceAll('ý', 'y')
@@ -285,7 +322,9 @@ class _FaqScreenState extends State<FaqScreen> {
   void _showSubmitQuestionBottomSheet() {
     final isDark = widget.appState.isDarkMode;
     final tc = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final sc = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final sc = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final bg = isDark ? AppColors.darkDialogBg : Colors.white;
 
     final formKey = GlobalKey<FormState>();
@@ -335,11 +374,16 @@ class _FaqScreenState extends State<FaqScreen> {
                   controller: nameCtrl,
                   style: TextStyle(color: tc),
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.emeraldGreen),
+                    prefixIcon: const Icon(
+                      Icons.person_outline_rounded,
+                      color: AppColors.emeraldGreen,
+                    ),
                     hintText: TkTranslations.supportNameHint,
                     hintStyle: TextStyle(color: sc.withOpacity(0.5)),
                     filled: true,
-                    fillColor: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
+                    fillColor: isDark
+                        ? Colors.white.withOpacity(0.04)
+                        : Colors.black.withOpacity(0.03),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -351,13 +395,20 @@ class _FaqScreenState extends State<FaqScreen> {
                   controller: questionCtrl,
                   style: TextStyle(color: tc),
                   maxLines: 4,
-                  validator: (val) => val == null || val.trim().isEmpty ? 'Soragyňyzy ýazyň' : null,
+                  validator: (val) => val == null || val.trim().isEmpty
+                      ? 'Soragyňyzy ýazyň'
+                      : null,
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.help_outline_rounded, color: AppColors.emeraldGreen),
+                    prefixIcon: const Icon(
+                      Icons.help_outline_rounded,
+                      color: AppColors.emeraldGreen,
+                    ),
                     hintText: 'Soragyňyz...',
                     hintStyle: TextStyle(color: sc.withOpacity(0.5)),
                     filled: true,
-                    fillColor: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
+                    fillColor: isDark
+                        ? Colors.white.withOpacity(0.04)
+                        : Colors.black.withOpacity(0.03),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -371,7 +422,9 @@ class _FaqScreenState extends State<FaqScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       if (!formKey.currentState!.validate()) return;
-                      final name = nameCtrl.text.trim().isEmpty ? 'Ulanyjy' : nameCtrl.text.trim();
+                      final name = nameCtrl.text.trim().isEmpty
+                          ? 'Ulanyjy'
+                          : nameCtrl.text.trim();
                       final question = questionCtrl.text.trim();
 
                       final launched = await EmailLauncher.open(
@@ -389,11 +442,16 @@ class _FaqScreenState extends State<FaqScreen> {
                           SnackBar(
                             content: Text(
                               TkTranslations.emailLaunchFailed,
-                              style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                color: Color(0xFFCBD5E1),
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             backgroundColor: Colors.orangeAccent,
                             behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             margin: const EdgeInsets.all(16),
                           ),
                         );
@@ -402,7 +460,10 @@ class _FaqScreenState extends State<FaqScreen> {
                     icon: const Icon(Icons.send_rounded, size: 18),
                     label: const Text(
                       TkTranslations.qaSubmitBtn,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.emeraldGreen,
@@ -446,7 +507,11 @@ class _FaqScreenState extends State<FaqScreen> {
                   color: AppColors.emeraldGreen,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.help_outline_rounded, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.help_outline_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -478,7 +543,10 @@ class _FaqScreenState extends State<FaqScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(TkTranslations.qaSubmitBtn, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              child: const Text(
+                TkTranslations.qaSubmitBtn,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
             ),
           ),
         ],
@@ -489,13 +557,15 @@ class _FaqScreenState extends State<FaqScreen> {
   List<FaqItem> _getFilteredItems() {
     final List<FaqItem> items = [];
     final normalizedQuery = normalizeTurkmenText(_searchQuery);
-    
+
     for (final category in _categories) {
-      if (_selectedCategory == 'Ählisi' || category.category == _selectedCategory) {
+      if (_selectedCategory == 'Ählisi' ||
+          category.category == _selectedCategory) {
         for (final item in category.items) {
           final normalizedQuestion = normalizeTurkmenText(item.question);
           final normalizedAnswer = normalizeTurkmenText(item.answer);
-          final matchesSearch = normalizedQuestion.contains(normalizedQuery) ||
+          final matchesSearch =
+              normalizedQuestion.contains(normalizedQuery) ||
               normalizedAnswer.contains(normalizedQuery);
           if (matchesSearch) {
             items.add(item);
@@ -503,7 +573,7 @@ class _FaqScreenState extends State<FaqScreen> {
         }
       }
     }
-    
+
     return items;
   }
 
@@ -512,10 +582,16 @@ class _FaqScreenState extends State<FaqScreen> {
     final isDark = widget.appState.isDarkMode;
     final textTheme = Theme.of(context).textTheme;
 
-    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final subColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textColor = isDark
+        ? AppColors.darkTextPrimary
+        : AppColors.lightTextPrimary;
+    final subColor = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final cardBg = isDark ? AppColors.darkCardBg : AppColors.lightCardBg;
-    final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+    final borderColor = isDark
+        ? AppColors.darkCardBorder
+        : AppColors.lightCardBorder;
 
     // Build the category list starting with 'Ählisi'
     final List<String> categoryList = ['Ählisi'];
@@ -601,8 +677,13 @@ class _FaqScreenState extends State<FaqScreen> {
                   style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Gözleg...',
-                    hintStyle: TextStyle(color: subColor.withValues(alpha: 0.7)),
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.emeraldGreen),
+                    hintStyle: TextStyle(
+                      color: subColor.withValues(alpha: 0.7),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.emeraldGreen,
+                    ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: Icon(Icons.clear_rounded, color: subColor),
@@ -614,7 +695,10 @@ class _FaqScreenState extends State<FaqScreen> {
                           )
                         : null,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
@@ -630,11 +714,13 @@ class _FaqScreenState extends State<FaqScreen> {
                     itemBuilder: (context, index) {
                       final cat = categoryList[index];
                       final isSelected = _selectedCategory == cat;
-                      
+
                       // Map icon for category if it exists
                       IconData? icon;
                       if (cat != 'Ählisi') {
-                        final foundCat = _categories.firstWhere((element) => element.category == cat);
+                        final foundCat = _categories.firstWhere(
+                          (element) => element.category == cat,
+                        );
                         icon = _getCategoryIcon(foundCat.icon);
                       } else {
                         icon = Icons.all_inclusive_rounded;
@@ -651,13 +737,20 @@ class _FaqScreenState extends State<FaqScreen> {
                           },
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
-                              gradient: isSelected ? AppColors.activePrayerGradient : null,
+                              gradient: isSelected
+                                  ? AppColors.activePrayerGradient
+                                  : null,
                               color: isSelected ? null : cardBg,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: isSelected ? Colors.transparent : borderColor,
+                                color: isSelected
+                                    ? Colors.transparent
+                                    : borderColor,
                                 width: 1,
                               ),
                             ),
@@ -666,15 +759,21 @@ class _FaqScreenState extends State<FaqScreen> {
                                 Icon(
                                   icon,
                                   size: 16,
-                                  color: isSelected ? Colors.white : AppColors.emeraldGreen,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : AppColors.emeraldGreen,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   cat,
                                   style: TextStyle(
-                                    color: isSelected ? Colors.white : textColor,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : textColor,
                                     fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
                                   ),
                                 ),
                               ],
@@ -695,85 +794,117 @@ class _FaqScreenState extends State<FaqScreen> {
                           color: AppColors.emeraldGreen,
                         ),
                       )
-                      : RefreshIndicator(
-                          color: AppColors.emeraldGreen,
-                          onRefresh: () => _syncWithServer(silent: false),
-                          child: filteredItems.isEmpty
-                              ? ListView(
-                                  physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
-                                  children: [
-                                    SizedBox(height: MediaQuery.of(context).size.height * 0.15),
-                                    Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(20),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.emeraldGreen.withValues(alpha: 0.08),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.find_in_page_rounded,
-                                              size: 48,
-                                              color: AppColors.emeraldGreen,
-                                            ),
+                    : RefreshIndicator(
+                        color: AppColors.emeraldGreen,
+                        onRefresh: () => _syncWithServer(silent: false),
+                        child: filteredItems.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(
+                                  parent: ClampingScrollPhysics(),
+                                ),
+                                children: [
+                                  SizedBox(
+                                    height:
+                                        MediaQuery.of(context).size.height *
+                                        0.15,
+                                  ),
+                                  Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.emeraldGreen
+                                                .withValues(alpha: 0.08),
+                                            shape: BoxShape.circle,
                                           ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            TkTranslations.qaNoResultsPrompt,
+                                          child: const Icon(
+                                            Icons.find_in_page_rounded,
+                                            size: 48,
+                                            color: AppColors.emeraldGreen,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          TkTranslations.qaNoResultsPrompt,
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 20),
+                                        ElevatedButton.icon(
+                                          onPressed: () {
+                                            HapticFeedback.mediumImpact();
+                                            _showSubmitQuestionBottomSheet();
+                                          },
+                                          icon: const Icon(
+                                            Icons.mail_outline_rounded,
+                                            size: 18,
+                                          ),
+                                          label: const Text(
+                                            TkTranslations.qaSubmitBtn,
                                             style: TextStyle(
-                                              color: textColor,
-                                              fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
-                                            textAlign: TextAlign.center,
                                           ),
-                                          const SizedBox(height: 20),
-                                          ElevatedButton.icon(
-                                            onPressed: () {
-                                              HapticFeedback.mediumImpact();
-                                              _showSubmitQuestionBottomSheet();
-                                            },
-                                            icon: const Icon(Icons.mail_outline_rounded, size: 18),
-                                            label: const Text(TkTranslations.qaSubmitBtn, style: TextStyle(fontWeight: FontWeight.bold)),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppColors.emeraldGreen,
-                                              foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                              elevation: 0,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                AppColors.emeraldGreen,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 24,
+                                              vertical: 12,
                                             ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            elevation: 0,
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                )
-                              : ListView.builder(
-                                  physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
-                                  itemCount: filteredItems.length + 1,
-                                  itemBuilder: (context, index) {
-                                    if (index == filteredItems.length) {
-                                      return _buildSubmitQuestionFooterCard(context, isDark);
-                                    }
-                                    final allDbItems = _categories.expand((cat) => cat.items).toList();
-                                    return FaqItemCard(
-                                      item: filteredItems[index],
-                                      categoryIcon: _getCategoryIcon(_getIconNameForItem(filteredItems[index])),
-                                      isDark: isDark,
-                                      allItems: allDbItems,
-                                      appState: widget.appState,
-                                    );
-                                  },
+                                  ),
+                                ],
+                              )
+                            : ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(
+                                  parent: ClampingScrollPhysics(),
                                 ),
-                        ),
-                ),
-              ],
-            ),
+                                itemCount: filteredItems.length + 1,
+                                itemBuilder: (context, index) {
+                                  if (index == filteredItems.length) {
+                                    return _buildSubmitQuestionFooterCard(
+                                      context,
+                                      isDark,
+                                    );
+                                  }
+                                  final allDbItems = _categories
+                                      .expand((cat) => cat.items)
+                                      .toList();
+                                  return FaqItemCard(
+                                    item: filteredItems[index],
+                                    categoryIcon: _getCategoryIcon(
+                                      _getIconNameForItem(filteredItems[index]),
+                                    ),
+                                    isDark: isDark,
+                                    allItems: allDbItems,
+                                    appState: widget.appState,
+                                  );
+                                },
+                              ),
+                      ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -793,8 +924,20 @@ class FaqItemCard extends StatelessWidget {
     required this.appState,
   });
 
+  String _stripMarkdown(String text) {
+    final cleaned = text
+        .replaceAll(RegExp(r'(^|\n)#{1,6}\s*'), '\n')
+        .replaceAll(RegExp(r'\*\*|\*|`'), '')
+        .replaceAll(RegExp(r'>\s*'), '')
+        .replaceAll(RegExp(r'[-\*]\s+'), ' ')
+        .replaceAll(RegExp(r'\n+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return cleaned;
+  }
+
   String _answerPreview(String answer) {
-    final flat = answer.replaceAll('\n', ' ').trim();
+    final flat = _stripMarkdown(answer);
     if (flat.length <= 110) return flat;
     return '${flat.substring(0, 110)}…';
   }
@@ -802,19 +945,20 @@ class FaqItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tc = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final sc = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final sc = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final cardBg = isDark ? AppColors.darkCardBg : AppColors.lightCardBg;
-    final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+    final borderColor = isDark
+        ? AppColors.darkCardBorder
+        : AppColors.lightCardBorder;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: borderColor,
-          width: 1.5,
-        ),
+        border: Border.all(color: borderColor, width: 1.5),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -869,11 +1013,7 @@ class FaqItemCard extends StatelessWidget {
                         _answerPreview(item.answer),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: sc,
-                          fontSize: 13,
-                          height: 1.45,
-                        ),
+                        style: TextStyle(color: sc, fontSize: 13, height: 1.45),
                       ),
                       const SizedBox(height: 8),
                       Text(
