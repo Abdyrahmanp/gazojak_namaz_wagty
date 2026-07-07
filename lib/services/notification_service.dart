@@ -164,10 +164,10 @@ class NotificationService {
     return lines.join('<br/>');
   }
 
-  /// Panel başlığı: 'gun' key için özel yazı, diğerleri için 'namazyna galdy'
+  /// Panel başlığı: ähli key'ler üçin galdy formatı
   String _panelTitle(String prayerKey, String prayerName) {
     if (prayerKey == 'gun') {
-      return 'Günüň dogmagy wagty boldy';
+      return 'Günüň dogmagyna galdy';
     }
     return '$prayerName namazyna galdy';
   }

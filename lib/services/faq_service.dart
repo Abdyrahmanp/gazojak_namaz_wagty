@@ -89,11 +89,7 @@ class FaqService {
 
   Future<String> _resolveRemoteUrl(SharedPreferences prefs) async {
     final stored = prefs.getString(_remoteUrlKey);
-    if (stored == null) return defaultRemoteUrl;
-    if (stored.contains('githubusercontent.com') ||
-        stored.contains('github.com') ||
-        stored.contains('gazojaknamazwagt.byethost3.com')) {
-      await prefs.setString(_remoteUrlKey, defaultRemoteUrl);
+    if (stored == null || stored.trim().isEmpty) {
       return defaultRemoteUrl;
     }
     return stored;

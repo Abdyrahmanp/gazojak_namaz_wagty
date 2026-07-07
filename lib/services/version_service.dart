@@ -93,14 +93,9 @@ class VersionService {
     return _resolveVersionUrl(prefs);
   }
 
-  /// Köne GitHub URL-sinden täze web sahypasyna geçirmek.
   Future<String> _resolveVersionUrl(SharedPreferences prefs) async {
     final stored = prefs.getString(_versionUrlKey);
-    if (stored == null) return defaultVersionUrl;
-    if (stored.contains('githubusercontent.com') ||
-        stored.contains('github.com') ||
-        stored.contains('gazojak_namaz_wagty.byethost')) {
-      await prefs.setString(_versionUrlKey, defaultVersionUrl);
+    if (stored == null || stored.trim().isEmpty) {
       return defaultVersionUrl;
     }
     return stored;
