@@ -75,6 +75,109 @@ class _CompassScreenState extends State<CompassScreen> {
     });
   }
 
+  void _showQiblaInfoDialog(
+    BuildContext context,
+    bool isDark,
+    Color textColor,
+    Color subColor,
+    Color cardBg,
+    Color borderColor,
+  ) {
+    HapticFeedback.lightImpact();
+    final dialogBg = isDark ? AppColors.darkDialogBg : Colors.white;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      builder: (context) => Dialog(
+        backgroundColor: dialogBg,
+        elevation: isDark ? 24 : 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: borderColor, width: 1.5),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.explore_rounded,
+                  color: Colors.orange,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Kybla ugry barada',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: isDark ? 0.1 : 0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Text(
+                  'Bu kybla görkezijisi telefonyňyzyň magnit sensorynyň esasynda işleýär.\n\n'
+                  '⚠️ Käbir tehniki ýagdaýlarda dogry işlemän biler:\n'
+                  '• Demir ýa-da magnit zatlar ýakynda bolsa\n'
+                  '• Sensor kalibrirlenmedik bolsa\n'
+                  '• Telefon gyzsa\n'
+                  '• Käbir köne enjamlar pes takyklykda bolsa\n\n'
+                  '💡 Takyklygy ýokarlandyrmak üçin telefonyňyzy yere goýup tekiz şekilde aýlaň. Möhüm namaz üçin ynamdar kybla çeşmesini hem ulanmagy maslahat berýäris.',
+                  style: TextStyle(
+                    color: subColor,
+                    fontSize: 13,
+                    height: 1.6,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.emeraldGreen,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  child: const Text(
+                    'Düşündim',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
   @override
   void dispose() {
     _compassSub?.cancel();
@@ -119,13 +222,35 @@ class _CompassScreenState extends State<CompassScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                TkTranslations.compassTitle,
-                style: textTheme.headlineMedium?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    TkTranslations.compassTitle,
+                    style: textTheme.headlineMedium?.copyWith(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _showQiblaInfoDialog(
+                      context, isDark, textColor, subColor, cardBg, borderColor,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: borderColor),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.emeraldGreen,
+                      size: 20,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(

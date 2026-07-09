@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/site_config.dart';
+import 'byethost_http_client.dart';
 
 class AppVersionInfo {
   final String versionName;
@@ -36,26 +36,23 @@ class VersionService {
   static const String defaultVersionUrl = SiteConfig.versionJsonUrl;
 
   // Current app hardcoded version
-  static const String currentVersionName = '1.0.0';
-  static const int currentVersionCode = 1;
-  static const String currentReleaseDate = '24.06.2026';
+  static const String currentVersionName = '1.1.0';
+  static const int currentVersionCode = 2;
+  static const String currentReleaseDate = '09.07.2026';
 
-  /// Fetches version info from the remote JSON file
+  /// Fetches version info from the remote JSON file.
+  /// byethost3.com AES challenge'ını otomatik çözer.
   Future<AppVersionInfo?> fetchRemoteVersion() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final urlString = await _resolveVersionUrl(prefs);
-      final url = Uri.parse(urlString);
 
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 10);
+      final jsonString = await BytehostHttpClient.fetchJson(urlString);
 
-      final request = await client.getUrl(url);
-      final response = await request.close();
-
-      if (response.statusCode == 200) {
-        final jsonString = await response.transform(utf8.decoder).join();
+      if (jsonString != null && jsonString.isNotEmpty) {
         final decoded = json.decode(jsonString);
+        // ignore: avoid_print
+        print('[VersionService] Remote version fetched successfully.');
         return AppVersionInfo.fromJson(decoded);
       }
     } catch (e) {

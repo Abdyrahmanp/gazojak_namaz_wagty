@@ -126,7 +126,108 @@ class _FaqScreenState extends State<FaqScreen> {
     }
   }
 
+  void _showFaqInfoDialog(
+    BuildContext context,
+    bool isDark,
+    Color textColor,
+    Color subColor,
+    Color cardBg,
+    Color borderColor,
+  ) {
+    HapticFeedback.lightImpact();
+    final dialogBg = isDark ? AppColors.darkDialogBg : Colors.white;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      builder: (context) => Dialog(
+        backgroundColor: dialogBg,
+        elevation: isDark ? 24 : 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: borderColor, width: 1.5),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldGreen.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.verified_rounded,
+                  color: AppColors.emeraldGreen,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Maglumat çeşmeleri barada',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldGreen.withValues(alpha: isDark ? 0.1 : 0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.emeraldGreen.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Text(
+                  'Bu bölümdäki ähli sorag-jogaplar ygtybarly we tanymal yslam alymlarynyň eserlerine hem-de sahyh hadys çeşmelerine esaslanýar.\n\n'
+                  'Maglumatlaryň hemmesi size iň düşnükli türkmen dilinde we tertipli görnüşde ýazylandyr.\n\n'
+                  'Täze soraglar we maglumatlar wagtal-wagtal girizilip durulýar.',
+                  style: TextStyle(
+                    color: subColor,
+                    fontSize: 13.5,
+                    height: 1.6,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.emeraldGreen,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  child: const Text(
+                    'Düşündim',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
   void _showSyncSettingsDialog() async {
+
     final currentUrl = await _faqService.getRemoteUrl();
     final urlController = TextEditingController(text: currentUrl);
 
@@ -634,7 +735,7 @@ class _FaqScreenState extends State<FaqScreen> {
                     ],
                   ),
                   IconButton(
-                    onPressed: _showSyncSettingsDialog,
+                    onPressed: () => _showFaqInfoDialog(context, isDark, textColor, subColor, cardBg, borderColor),
                     style: IconButton.styleFrom(
                       backgroundColor: cardBg,
                       shape: RoundedRectangleBorder(
@@ -642,20 +743,11 @@ class _FaqScreenState extends State<FaqScreen> {
                         side: BorderSide(color: borderColor),
                       ),
                     ),
-                    icon: _isUpdating
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.emeraldGreen,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.sync_rounded,
-                            color: AppColors.emeraldGreen,
-                            size: 20,
-                          ),
+                    icon: const Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.emeraldGreen,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),

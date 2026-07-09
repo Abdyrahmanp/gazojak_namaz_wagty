@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/site_config.dart';
 import '../models/faq_item.dart';
+import 'byethost_http_client.dart';
 
 class FaqService {
   static const String _cacheKey = 'cached_faq_data';
@@ -45,28 +45,23 @@ class FaqService {
     return decoded.map((item) => FaqCategory.fromJson(item)).toList();
   }
 
-  /// Fetches the latest FAQ JSON from the remote server/GitHub in the background.
+  /// Fetches the latest FAQ JSON from the remote server in the background.
+  /// byethost3.com AES challenge'ını otomatik çözer.
   /// If successful, saves to cache and returns true. Does not block the main execution.
   Future<bool> updateFaqDataFromServer({String? customUrl}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final urlString =
-          customUrl ?? await _resolveRemoteUrl(prefs);
-      final url = Uri.parse(urlString);
-      
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 10);
-      
-      final request = await client.getUrl(url);
-      final response = await request.close();
-      
-      if (response.statusCode == 200) {
-        final jsonString = await response.transform(utf8.decoder).join();
-        
+      final urlString = customUrl ?? await _resolveRemoteUrl(prefs);
+
+      final jsonString = await BytehostHttpClient.fetchJson(urlString);
+
+      if (jsonString != null && jsonString.isNotEmpty) {
         // Validate JSON structure by testing parsing
         final parsed = _parseJson(jsonString);
         if (parsed.isNotEmpty) {
           await prefs.setString(_cacheKey, jsonString);
+          // ignore: avoid_print
+          print('[FaqService] FAQ successfully updated from server.');
           return true;
         }
       }

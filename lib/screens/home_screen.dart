@@ -16,11 +16,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Future<void> _selectDate(BuildContext context) async {
+    final now = DateTime.now();
     final DateTime? picked = await showTurkmenDatePicker(
       context: context,
       initialDate: widget.appState.selectedDate,
-      firstDate: DateTime(DateTime.now().year, 1, 1),
-      lastDate: DateTime(DateTime.now().year, 12, 31),
+      firstDate: DateTime(now.year - 5, 1, 1),
+      lastDate: DateTime(now.year + 10, 12, 31),
       isDark: widget.appState.isDarkMode,
     );
     if (picked != null) {
