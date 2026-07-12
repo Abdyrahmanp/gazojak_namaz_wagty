@@ -179,7 +179,7 @@ class AppState extends ChangeNotifier {
     bool isMekruh = false;
     int mekruhMinutesLeft = 0;
     if (targetDateTime.isBefore(agsamDt) &&
-        diffToAgsam.inMinutes <= 20 &&
+        diffToAgsam.inMinutes <= 30 &&
         diffToAgsam.inMinutes >= 0) {
       isMekruh = true;
       mekruhMinutesLeft = diffToAgsam.inMinutes + 1;

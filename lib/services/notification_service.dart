@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -29,6 +30,10 @@ class NotificationService {
   static const int alertBaseId = 1000;
   static const Color _panelAccent = Color(0xFF2E7D32);
   static const String _greenHtml = '#43A047';
+
+  // Native MethodChannel for the two-step panel alarm chain (PrayerPanelReceiver.kt)
+  static const MethodChannel _panelChannel =
+      MethodChannel('com.example.gazojak_namaz_wagty/panel');
 
   /// Called by AppState after initialize(). When the persistent panel
   /// notification is tapped by the user, this callback re-shows the panel
@@ -348,89 +353,74 @@ class NotificationService {
     await _schedulePanelRefreshes(prayerService, offsets);
   }
 
+  /// Schedules a two-step native alarm chain via [PrayerPanelReceiver] so the
+  /// panel updates even when Dart/Flutter is fully in the background.
+  ///
+  /// Step 1: fires at the nearest upcoming prayer → shows updated panel.
+  /// Step 2: fires at the prayer after that → shows updated panel again.
+  /// When the app is opened again, Flutter re-primes the chain from scratch.
   Future<void> _schedulePanelRefreshes(
     PrayerTimeService prayerService,
     Map<String, int> offsets,
   ) async {
     await _cancelScheduledPanelRefreshes();
+    if (!_isAndroid) return;
 
     final now = DateTime.now();
     const prayerKeys = ['bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'];
 
-    DateTime? nearestAtTime;
-    String? nearestActiveKey;
-    String? nearestNextKey;
-    DateTime? nearestNextDt;
-    PrayerTime? nearestDailyTimes;
+    // Collect up to 3 future prayer transitions (step0=nearest, step1, step2)
+    final List<_PanelStep> steps = [];
 
-    for (final dayOffset in [0, 1]) {
+    for (final dayOffset in [0, 1, 2]) {
+      if (steps.length >= 3) break;
       final date = now.add(Duration(days: dayOffset));
       final times = prayerService.getAdjustedDateTimes(date, offsets);
       final dayDate = DateTime(date.year, date.month, date.day);
       final dailyTimes = prayerService.getTimesForDate(dayDate);
 
       for (final atKey in prayerKeys) {
+        if (steps.length >= 3) break;
         final atTime = times[atKey]!;
         if (!atTime.isAfter(now)) continue;
 
-        if (nearestAtTime == null || atTime.isBefore(nearestAtTime)) {
-          nearestAtTime = atTime;
-          nearestActiveKey = atKey;
-          nearestDailyTimes = dailyTimes;
-          final nextInfo = prayerService.getNextPrayerInfo(
-            atTime.add(const Duration(seconds: 1)),
-            offsets,
-          );
-          nearestNextKey = nextInfo['key'] as String;
-          nearestNextDt = nextInfo['dateTime'] as DateTime;
-        }
+        // What is the active prayer when atKey fires?
+        final activeKey = atKey; // when atKey fires, atKey becomes active
+        final nextInfo = prayerService.getNextPrayerInfo(
+          atTime.add(const Duration(seconds: 1)),
+          offsets,
+        );
+        final nextKey = nextInfo['key'] as String;
+        final nextDt  = nextInfo['dateTime'] as DateTime;
+        final nextName = TkTranslations.prayerNamesShort[nextKey] ?? nextKey;
+
+        steps.add(_PanelStep(
+          atMs:     atTime.millisecondsSinceEpoch,
+          title:    _panelTitle(nextKey, nextName),
+          bodyHtml: _buildPanelBodyHtml(dailyTimes, offsets, activeKey),
+          whenMs:   nextDt.millisecondsSinceEpoch,
+        ));
       }
     }
 
-    if (nearestAtTime == null ||
-        nearestActiveKey == null ||
-        nearestNextKey == null ||
-        nearestNextDt == null ||
-        nearestDailyTimes == null) {
-      return;
-    }
+    if (steps.isEmpty) return;
 
-    final nextPrayerName =
-        TkTranslations.prayerNamesShort[nearestNextKey] ?? nearestNextKey;
-    final title = _panelTitle(nearestNextKey, nextPrayerName);
-    final bodyHtml =
-        _buildPanelBodyHtml(nearestDailyTimes, offsets, nearestActiveKey);
-    final whenMs = nearestNextDt.millisecondsSinceEpoch;
+    final step0 = steps[0];
+    final step1 = steps.length > 1 ? steps[1] : null;
 
     try {
-      // #region agent log
-      agentDebugLog(
-        location: 'notification_service.dart:_schedulePanelRefreshes',
-        message: 'scheduling next panel refresh on same id as active panel',
-        hypothesisId: 'A',
-        data: {
-          'scheduleId': persistentNotificationId,
-          'activeKey': nearestActiveKey,
-          'nextKey': nearestNextKey,
-          'atTime': nearestAtTime.toIso8601String(),
-        },
-        runId: 'post-fix',
-      );
-      // #endregion
-      await _plugin.zonedSchedule(
-        id: persistentNotificationId,
-        title: title,
-        body: '',
-        scheduledDate: tz.TZDateTime.from(nearestAtTime, tz.local),
-        notificationDetails: NotificationDetails(
-          android: _persistentDetails(bodyHtml: bodyHtml, whenMs: whenMs),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
+      await _panelChannel.invokeMethod<void>('schedulePanelChain', {
+        'atMs':         step0.atMs,
+        'title':        step0.title,
+        'bodyHtml':     step0.bodyHtml,
+        'whenMs':       step0.whenMs,
+        'nextAtMs':     step1?.atMs     ?? 0,
+        'nextTitle':    step1?.title    ?? '',
+        'nextBodyHtml': step1?.bodyHtml ?? '',
+        'nextWhenMs':   step1?.whenMs   ?? 0,
+      });
     } catch (e) {
-      debugPrint(
-        'panel refresh schedule error ($nearestActiveKey, id=$persistentNotificationId): $e',
-      );
+      debugPrint('_schedulePanelRefreshes native error: $e');
     }
   }
 
@@ -457,24 +447,17 @@ class NotificationService {
     }
   }
 
-  /// Cancels the active ongoing panel (8888) AND all scheduled refreshes (8889-8910).
-  /// Only call when the user explicitly disables the feature in settings.
+  /// Cancels the active ongoing panel (8888) AND all scheduled refreshes (8889-8910)
+  /// AND the native alarm chain. Only call when user disables the feature.
   Future<void> _cancelAllPanelNotifications() async {
-    // #region agent log
-    agentDebugLog(
-      location: 'notification_service.dart:_cancelAllPanelNotifications',
-      message: 'cancelling all panel notifications',
-      hypothesisId: 'E',
-      data: {
-        'activePanelId': persistentNotificationId,
-        'refreshBaseId': _panelRefreshBaseId,
-      },
-    );
-    // #endregion
     try {
-      await _plugin.cancel(id: persistentNotificationId); // No tag needed.
+      await _plugin.cancel(id: persistentNotificationId);
     } catch (_) {}
     await _cancelScheduledPanelRefreshes();
+    // Also cancel the native AlarmManager chain (PrayerPanelReceiver)
+    try {
+      await _panelChannel.invokeMethod<void>('cancelPanelChain');
+    } catch (_) {}
   }
 
   Future<void> _cancelScheduledAlerts() async {
@@ -486,4 +469,19 @@ class NotificationService {
   Future<void> cancelAllPrayerAlerts() async {
     await _cancelScheduledAlerts();
   }
+}
+
+/// Internal data class for one panel transition step.
+class _PanelStep {
+  final int atMs;
+  final String title;
+  final String bodyHtml;
+  final int whenMs;
+
+  const _PanelStep({
+    required this.atMs,
+    required this.title,
+    required this.bodyHtml,
+    required this.whenMs,
+  });
 }

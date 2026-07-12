@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../models/faq_item.dart';
 import '../providers/app_state.dart';
+import '../services/faq_service.dart';
 import '../utils/colors.dart';
 import '../utils/tk_translations.dart';
 import '../widgets/turkmen_date_picker.dart';
+import 'faq_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppState appState;
@@ -44,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     showDialog(
       context: context,
-      builder: (_) => Dialog(
+      builder: (dialogCtx) => Dialog(
         backgroundColor: bg,
         elevation: isDark ? 24 : 8,
         shadowColor: isDark ? Colors.black54 : Colors.black12,
@@ -72,16 +75,41 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Gün ýaşmazdan (Agşam namazyndan) öňki 20 minutlyk wagt Kerahet (Mekruh) wagty diýlip hasaplanylýar.\n\n'
+                'Gün ýaşmazdan (Agşam namazyndan) öňki 30 minutlyk wagt Kerahet (Mekruh) wagty diýlip hasaplanylýar.\n\n'
                 'Fikh ylmyna görä, bu wagt aralygynda hiç hili nafile (meýletin) ýa-da sünnet namazlaryny okamak bolmaz. Diňe şol günüň ikindi namazynyň parzyny okamaga gäç galan bolsaňyz okap bilersiňiz.\n\n'
                 'Bu wagt aralygynda namaz okamaklygyň gadagan edilmegi Pygamberimiziň (s.a.w.) hadyslaryna esaslanýar.',
                 style: TextStyle(color: tc, fontSize: 14, height: 1.55),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              // FAQ link button
+              GestureDetector(
+                onTap: () async {
+                  Navigator.pop(dialogCtx);
+                  await _navigateToMekruhFaq(context);
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.menu_book_rounded, size: 15, color: AppColors.emeraldGreen),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Doly maglumat üçin: Haçan namaz okamaly däl?',
+                      style: TextStyle(
+                        color: AppColors.emeraldGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColors.emeraldGreen,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(dialogCtx),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.emeraldGreen,
                     foregroundColor: Colors.white,
@@ -97,6 +125,31 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  /// Loads FAQ data and opens the 'Namazy Haçan Okamaly Däl?' detail screen.
+  Future<void> _navigateToMekruhFaq(BuildContext context) async {
+    try {
+      final faqService = FaqService();
+      final categories = await faqService.loadFaqData();
+      final allItems = categories.expand((c) => c.items).toList();
+      final FaqItem? target = allItems.cast<FaqItem?>().firstWhere(
+        (item) => item != null && item.question.contains('Okamaly Däl'),
+        orElse: () => null,
+      );
+      if (target != null && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FaqDetailScreen(
+              appState: widget.appState,
+              item: target,
+              allItems: allItems,
+            ),
+          ),
+        );
+      }
+    } catch (_) {}
   }
 
   @override

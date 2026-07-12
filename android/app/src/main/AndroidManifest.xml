@@ -50,6 +50,16 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+
+        <!-- Native prayer panel receiver: updates the persistent panel (id=8888)
+             directly via AlarmManager even when Flutter/Dart is not running. -->
+        <receiver
+            android:name=".PrayerPanelReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.gazojak_namaz_wagty.PANEL_UPDATE"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
