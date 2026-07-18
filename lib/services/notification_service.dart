@@ -282,6 +282,7 @@ class NotificationService {
     required PrayerTimeService prayerService,
     required Map<String, int> offsets,
     required bool soundEnabled,
+    Map<String, bool>? prayerSoundEnabled,
     required bool persistentPanelEnabled,
   }) async {
     if (!_isAndroid) return;
@@ -320,13 +321,17 @@ class NotificationService {
             : 'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.';
 
         try {
+          // Per-prayer sound override: if the global switch is on, check the
+          // per-prayer toggle; if global is off, always silent.
+          final perPrayerSoundOn = soundEnabled &&
+              (prayerSoundEnabled == null || (prayerSoundEnabled[key] ?? true));
           await _plugin.zonedSchedule(
             id: id,
             title: notifTitle,
             body: notifBody,
             scheduledDate: tzTime,
             notificationDetails: NotificationDetails(
-              android: _alertDetails(soundEnabled),
+              android: _alertDetails(perPrayerSoundOn),
             ),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );

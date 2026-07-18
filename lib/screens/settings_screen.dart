@@ -392,6 +392,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 25),
               ],
+
+              // ── Wagtlary sazlamak accordion ───────────────────────────────────
+              _buildOffsetSection(isDark, tt, tc, sc, cardBg, borderColor),
+              const SizedBox(height: 20),
+
+              // ── Per-prayer sound accordion ───────────────────────────────────
+              _buildPrayerSoundSection(isDark, tt, tc, sc, cardBg, borderColor),
               const SizedBox(height: 25),
 
               // About + Legal + Contact Support
@@ -670,10 +677,323 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+
+  // ── Wagtlary sazlamak Accordion ─────────────────────────────────────────────
+  static const List<String> _prayerKeys = [
+    'bamdat', 'gun', 'oyle', 'ikindi', 'agsam', 'yasy'
+  ];
+
+  static const Map<String, IconData> _prayerIcons = {
+    'bamdat': Icons.wb_twilight_rounded,
+    'gun':    Icons.wb_sunny_outlined,
+    'oyle':   Icons.light_mode_rounded,
+    'ikindi': Icons.wb_cloudy_rounded,
+    'agsam':  Icons.nights_stay_outlined,
+    'yasy':   Icons.dark_mode_rounded,
+  };
+
+  Widget _buildOffsetSection(
+    bool isDark,
+    TextTheme tt,
+    Color tc,
+    Color sc,
+    Color cardBg,
+    Color borderColor,
+  ) {
+    final appState = widget.appState;
+    final offsets = appState.offsets;
+    final sectionBg = isDark
+        ? Colors.white.withValues(alpha: 0.03)
+        : Colors.black.withValues(alpha: 0.02);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+          childrenPadding: EdgeInsets.zero,
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.emeraldGreen.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.tune_rounded, color: AppColors.emeraldGreen),
+          ),
+          title: Text(
+            TkTranslations.offsetSetting,
+            style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            TkTranslations.offsetExplain,
+            style: tt.bodySmall?.copyWith(color: sc),
+          ),
+          iconColor: AppColors.emeraldGreen,
+          collapsedIconColor: sc,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Column(
+                children: [
+                  // Reset button row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          appState.resetOffsets();
+                        },
+                        icon: const Icon(Icons.restart_alt_rounded, size: 16, color: Colors.redAccent),
+                        label: Text(
+                          TkTranslations.offsetReset,
+                          style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Per-prayer rows
+                  ...List.generate(_prayerKeys.length, (i) {
+                    final key = _prayerKeys[i];
+                    final offset = offsets[key] ?? 0;
+                    final name = TkTranslations.prayerNames[key] ?? key;
+                    final icon = _prayerIcons[key] ?? Icons.access_time_rounded;
+                    final isLast = i == _prayerKeys.length - 1;
+                    return Column(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: sectionBg,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(icon, color: AppColors.emeraldGreen, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  style: tt.bodyMedium?.copyWith(
+                                    color: tc,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              // Minus button
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  appState.setOffset(key, offset - 1);
+                                },
+                                child: Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.redAccent, width: 1.5),
+                                  ),
+                                  child: const Icon(Icons.remove, color: Colors.redAccent, size: 18),
+                                ),
+                              ),
+                              // Offset display
+                              SizedBox(
+                                width: 52,
+                                child: Text(
+                                  '$offset ${TkTranslations.minutesSuffix}',
+                                  textAlign: TextAlign.center,
+                                  style: tt.bodyMedium?.copyWith(
+                                    color: offset == 0 ? sc : (offset < 0 ? Colors.redAccent : AppColors.emeraldGreen),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              // Plus button
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  appState.setOffset(key, offset + 1);
+                                },
+                                child: Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.emeraldGreen, width: 1.5),
+                                  ),
+                                  child: const Icon(Icons.add, color: AppColors.emeraldGreen, size: 18),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!isLast) const SizedBox(height: 4),
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Bildiriş Ses Sazlamalary Accordion ────────────────────────────────────────
+  Widget _buildPrayerSoundSection(
+    bool isDark,
+    TextTheme tt,
+    Color tc,
+    Color sc,
+    Color cardBg,
+    Color borderColor,
+  ) {
+    final appState = widget.appState;
+    final prayerSoundEnabled = appState.prayerSoundEnabled;
+    final globalSoundOn = appState.notificationSoundEnabled;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+          childrenPadding: EdgeInsets.zero,
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.emeraldGreen.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.notifications_active_rounded, color: AppColors.emeraldGreen),
+          ),
+          title: Text(
+            TkTranslations.prayerSoundTitle,
+            style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            TkTranslations.prayerSoundExplain,
+            style: tt.bodySmall?.copyWith(color: sc),
+          ),
+          iconColor: AppColors.emeraldGreen,
+          collapsedIconColor: sc,
+          children: [
+            // Global sound off warning
+            if (!globalSoundOn)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: isDark ? 0.1 : 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.volume_off_rounded, color: Colors.orange, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Umumy bildiriş sesi öçürilipdir. Aşakdaky sazlamalar umumy ses açylanda güýje girer.',
+                          style: tt.bodySmall?.copyWith(color: Colors.orange, height: 1.45),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Column(
+                children: List.generate(_prayerKeys.length, (i) {
+                  final key = _prayerKeys[i];
+                  final name = TkTranslations.prayerNames[key] ?? key;
+                  final icon = _prayerIcons[key] ?? Icons.access_time_rounded;
+                  final isEnabled = prayerSoundEnabled[key] ?? true;
+                  final isLast = i == _prayerKeys.length - 1;
+
+                  return Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isEnabled
+                              ? AppColors.emeraldGreen.withValues(alpha: isDark ? 0.07 : 0.05)
+                              : (isDark
+                                  ? Colors.white.withValues(alpha: 0.03)
+                                  : Colors.black.withValues(alpha: 0.02)),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isEnabled
+                                ? AppColors.emeraldGreen.withValues(alpha: 0.25)
+                                : borderColor,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                              color: isEnabled ? AppColors.emeraldGreen : sc,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(icon, color: isEnabled ? AppColors.emeraldGreen : sc, size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: tt.bodyMedium?.copyWith(
+                                  color: isEnabled ? tc : sc,
+                                  fontWeight: isEnabled ? FontWeight.w600 : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                            Switch.adaptive(
+                              value: isEnabled,
+                              activeThumbColor: Colors.white,
+                              activeTrackColor: AppColors.emeraldGreen,
+                              inactiveThumbColor: isDark ? Colors.white38 : Colors.white,
+                              inactiveTrackColor: isDark
+                                  ? Colors.white.withValues(alpha: 0.12)
+                                  : Colors.black.withValues(alpha: 0.1),
+                              onChanged: (v) {
+                                HapticFeedback.selectionClick();
+                                appState.setPrayerSoundEnabled(key, v);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!isLast) const SizedBox(height: 6),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _card(Color border, Color bg, {required Widget child}) => Container(
         decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20), border: Border.all(color: border)),
         child: child,
       );
+
 
   Widget _switchTile({
     required IconData icon,

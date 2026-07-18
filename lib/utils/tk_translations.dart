@@ -145,11 +145,16 @@ class TkTranslations {
   static const String themeSetting                 = 'Garaňky tema';
   static const String notificationSoundSetting     = 'Bildiriş sesleri';
   static const String persistentNotificationSetting = 'Yzygiderli wagtlar paneli';
-  static const String offsetSetting               = 'Wagtlary sazlamak (goşmaça)';
-  static const String offsetExplain               = 'Programmanyň wagtlary resmi senenama esasynda takyk. Diňe metjidiňiz başga wagt görkezýän bolsa, bu ýerden sazlap bilersiňiz.';
-  static const String minutesSuffix               = 'minut';
+  static const String offsetSetting               = 'Wagtlary sazlamak';
+  static const String offsetExplain               = 'Resmi kalendara görä minut goşup/aýryp bilersiňiz:';
+  static const String offsetReset                 = 'Nola getirmek';
+  static const String minutesSuffix               = 'm';
   static const String aboutTitle                  = 'Biz Barada';
-  static const String appVersion                  = 'Wersiýa 1.0.0';
+  static const String appVersion                  = 'Wersiýa 1.1.0';
+
+  // Per-prayer sound settings
+  static const String prayerSoundTitle    = 'Namaz ses sazlamalary';
+  static const String prayerSoundExplain  = 'Her namaz üçin bildiriş sesini aýratyn açyp/ýapyp bilersiňiz:';
 
   static const String aboutContent =
       'Bu programma, Gazojak şäherimizdäki musulman doganlarymyzyň namaz wagtlaryna iň dogry we iň çalt usulda ýetip bilmekleri, dini soraglaryna ygtybarly jogaplar tapyp bilmekleri maksady bilen taýýarlandy. Maksadymyz, tehnologiýany haýyrly bir wesaýata öwrüp, durmuşymyzy aňsatlaşdyrmakdyr.\n\n'

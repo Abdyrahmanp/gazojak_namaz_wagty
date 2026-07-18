@@ -139,12 +139,8 @@ class _CompassScreenState extends State<CompassScreen> {
                   '• Sensor kalibrirlenmedik bolsa\n'
                   '• Telefon gyzsa\n'
                   '• Käbir köne enjamlar pes takyklykda bolsa\n\n'
-                  '💡 Takyklygy ýokarlandyrmak üçin telefonyňyzy yere goýup tekiz şekilde aýlaň. Möhüm namaz üçin ynamdar kybla çeşmesini hem ulanmagy maslahat berýäris.',
-                  style: TextStyle(
-                    color: subColor,
-                    fontSize: 13,
-                    height: 1.6,
-                  ),
+                  '💡 Takyklygy ýokarlandyrmak üçin telefonyňyzy eliňize alyp 8 şekilde aýlaň. Möhüm namaz üçin ynamdar kybla çeşmesini hem ulanmagy maslahat berýäris.',
+                  style: TextStyle(color: subColor, fontSize: 13, height: 1.6),
                 ),
               ),
               const SizedBox(height: 20),
@@ -163,10 +159,7 @@ class _CompassScreenState extends State<CompassScreen> {
                   ),
                   child: const Text(
                     'Düşündim',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ),
               ),
@@ -176,7 +169,6 @@ class _CompassScreenState extends State<CompassScreen> {
       ),
     );
   }
-
 
   @override
   void dispose() {
@@ -197,13 +189,16 @@ class _CompassScreenState extends State<CompassScreen> {
   Widget build(BuildContext context) {
     final isDark = widget.appState.isDarkMode;
     final textTheme = Theme.of(context).textTheme;
-    final textColor =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final subColor =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textColor = isDark
+        ? AppColors.darkTextPrimary
+        : AppColors.lightTextPrimary;
+    final subColor = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final cardBg = isDark ? AppColors.darkCardBg : AppColors.lightCardBg;
-    final borderColor =
-        isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+    final borderColor = isDark
+        ? AppColors.darkCardBorder
+        : AppColors.lightCardBorder;
 
     if (_isAligned) {
       if (!_hasVibrated) {
@@ -235,7 +230,12 @@ class _CompassScreenState extends State<CompassScreen> {
                   ),
                   IconButton(
                     onPressed: () => _showQiblaInfoDialog(
-                      context, isDark, textColor, subColor, cardBg, borderColor,
+                      context,
+                      isDark,
+                      textColor,
+                      subColor,
+                      cardBg,
+                      borderColor,
                     ),
                     style: IconButton.styleFrom(
                       backgroundColor: cardBg,
@@ -333,8 +333,9 @@ class _CompassScreenState extends State<CompassScreen> {
                   height: 18,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color:
-                        isAligned ? AppColors.mintGreen : AppColors.emeraldGreen,
+                    color: isAligned
+                        ? AppColors.mintGreen
+                        : AppColors.emeraldGreen,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
                 ),

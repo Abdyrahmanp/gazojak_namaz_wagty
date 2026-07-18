@@ -23,6 +23,16 @@ class AppState extends ChangeNotifier {
     'yasy': 0,
   };
 
+  // Per-prayer sound toggles (true = sound enabled for that prayer)
+  final Map<String, bool> _prayerSoundEnabled = {
+    'bamdat': true,
+    'gun': true,
+    'oyle': true,
+    'ikindi': true,
+    'agsam': true,
+    'yasy': true,
+  };
+
   int _zikirCount = 0;
   int _selectedZikirIndex = 0;
   int _zikirTarget = 33;
@@ -43,6 +53,7 @@ class AppState extends ChangeNotifier {
   bool get persistentNotificationEnabled => _persistentNotificationEnabled;
   bool get notificationSoundEnabled => _notificationSoundEnabled;
   Map<String, int> get offsets => _offsets;
+  Map<String, bool> get prayerSoundEnabled => Map.unmodifiable(_prayerSoundEnabled);
   int get zikirCount => _zikirCount;
   int get selectedZikirIndex => _selectedZikirIndex;
   int get zikirTarget => _zikirTarget;
@@ -72,6 +83,9 @@ class AppState extends ChangeNotifier {
       _zikirTarget = prefs.getInt('zikir_target') ?? 33;
       for (final key in _offsets.keys) {
         _offsets[key] = prefs.getInt('offset_$key') ?? 0;
+      }
+      for (final key in _prayerSoundEnabled.keys) {
+        _prayerSoundEnabled[key] = prefs.getBool('prayer_sound_$key') ?? true;
       }
     } catch (e) {
       // ignore: avoid_print
@@ -108,6 +122,7 @@ class AppState extends ChangeNotifier {
       prayerService: prayerService,
       offsets: _offsets,
       soundEnabled: _notificationSoundEnabled,
+      prayerSoundEnabled: _prayerSoundEnabled,
       persistentPanelEnabled: _persistentNotificationEnabled,
     );
   }
@@ -316,6 +331,16 @@ class AppState extends ChangeNotifier {
       await prefs.setInt('offset_$key', val);
       await _rescheduleNotifications();
       _computePrayerState();
+    }
+  }
+
+  Future<void> setPrayerSoundEnabled(String key, bool val) async {
+    if (_prayerSoundEnabled.containsKey(key)) {
+      _prayerSoundEnabled[key] = val;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('prayer_sound_$key', val);
+      await _rescheduleNotifications();
     }
   }
 
