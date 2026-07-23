@@ -290,21 +290,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       tt: tt,
                       tc: tc,
                       borderColor: borderColor,
-                      showDivider: true,
-                    ),
-                    _switchTile(
-                      icon: Icons.volume_up_rounded,
-                      iconColor: AppColors.emeraldGreen,
-                      iconBg: AppColors.emeraldGreen.withValues(alpha: 0.08),
-                      label: TkTranslations.notificationSoundSetting,
-                      value: widget.appState.notificationSoundEnabled,
-                      onChanged: (v) {
-                        HapticFeedback.selectionClick();
-                        widget.appState.toggleNotificationSound(v);
-                      },
-                      tt: tt,
-                      tc: tc,
-                      borderColor: borderColor,
                       showDivider: false,
                     ),
                   ],
@@ -890,44 +875,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           iconColor: AppColors.emeraldGreen,
           collapsedIconColor: sc,
           children: [
-            // Global sound off warning
-            if (!globalSoundOn)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: isDark ? 0.1 : 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.volume_off_rounded, color: Colors.orange, size: 18),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Umumy bildiriş sesi öçürilipdir. Aşakdaky sazlamalar umumy ses açylanda güýje girer.',
-                          style: tt.bodySmall?.copyWith(color: Colors.orange, height: 1.45),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            // Per-prayer sound rows
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: Column(
                 children: List.generate(_prayerKeys.length, (i) {
                   final key = _prayerKeys[i];
                   final name = TkTranslations.prayerNames[key] ?? key;
                   final icon = _prayerIcons[key] ?? Icons.access_time_rounded;
-                  final isEnabled = prayerSoundEnabled[key] ?? true;
+                  // When global sound is OFF, visually treat all prayer sounds as OFF
+                  final isEnabled = globalSoundOn && (prayerSoundEnabled[key] ?? true);
                   final isLast = i == _prayerKeys.length - 1;
 
                   return Column(
                     children: [
-                      Container(
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeInOut,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
                           color: isEnabled
@@ -944,10 +908,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              isEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                              color: isEnabled ? AppColors.emeraldGreen : sc,
-                              size: 18,
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: Icon(
+                                isEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                                key: ValueKey(isEnabled),
+                                color: isEnabled ? AppColors.emeraldGreen : sc,
+                                size: 18,
+                              ),
                             ),
                             const SizedBox(width: 6),
                             Icon(icon, color: isEnabled ? AppColors.emeraldGreen : sc, size: 18),
@@ -961,6 +929,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                               ),
                             ),
+                            // When global sound is off, switch shows as off and is
+                            // still interactive — tapping it re-enables global sound too.
                             Switch.adaptive(
                               value: isEnabled,
                               activeThumbColor: Colors.white,
@@ -971,6 +941,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   : Colors.black.withValues(alpha: 0.1),
                               onChanged: (v) {
                                 HapticFeedback.selectionClick();
+                                // setPrayerSoundEnabled auto-enables global
+                                // sound when v==true (see AppState).
                                 appState.setPrayerSoundEnabled(key, v);
                               },
                             ),
@@ -981,6 +953,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   );
                 }),
+              ),
+            ),
+
+            // ── Divider ──────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(color: borderColor, height: 1),
+            ),
+
+            // ── Global notification sound toggle (master) — always at bottom ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: globalSoundOn
+                      ? AppColors.emeraldGreen.withValues(alpha: isDark ? 0.10 : 0.07)
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.04)
+                          : Colors.black.withValues(alpha: 0.03)),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: globalSoundOn
+                        ? AppColors.emeraldGreen.withValues(alpha: 0.35)
+                        : borderColor,
+                    width: globalSoundOn ? 1.5 : 1.0,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: globalSoundOn
+                            ? AppColors.emeraldGreen.withValues(alpha: 0.15)
+                            : (isDark
+                                ? Colors.white.withValues(alpha: 0.07)
+                                : Colors.black.withValues(alpha: 0.05)),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        globalSoundOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                        color: globalSoundOn ? AppColors.emeraldGreen : sc,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            TkTranslations.notificationSoundSetting,
+                            style: tt.bodyMedium?.copyWith(
+                              color: tc,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            globalSoundOn
+                                ? 'Namaz bildiriş sesleri işjeň'
+                                : 'Ähli namaz bildiriş sesleri öçük',
+                            style: tt.bodySmall?.copyWith(
+                              color: globalSoundOn ? AppColors.emeraldGreen : sc,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch.adaptive(
+                      value: globalSoundOn,
+                      activeThumbColor: Colors.white,
+                      activeTrackColor: AppColors.emeraldGreen,
+                      inactiveThumbColor: isDark ? Colors.white38 : Colors.white,
+                      inactiveTrackColor: isDark
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : Colors.black.withValues(alpha: 0.1),
+                      onChanged: (v) {
+                        HapticFeedback.selectionClick();
+                        appState.toggleNotificationSound(v);
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

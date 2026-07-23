@@ -337,6 +337,14 @@ class AppState extends ChangeNotifier {
   Future<void> setPrayerSoundEnabled(String key, bool val) async {
     if (_prayerSoundEnabled.containsKey(key)) {
       _prayerSoundEnabled[key] = val;
+      // If user enables any per-prayer sound, automatically enable global
+      // notification sound as well — there's no point having a per-prayer
+      // sound on while the master switch is off.
+      if (val && !_notificationSoundEnabled) {
+        _notificationSoundEnabled = true;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('notification_sound_enabled', true);
+      }
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('prayer_sound_$key', val);
