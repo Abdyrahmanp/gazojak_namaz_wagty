@@ -290,8 +290,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       tt: tt,
                       tc: tc,
                       borderColor: borderColor,
-                      showDivider: false,
+                      showDivider: true,
                     ),
+                    // ── Global ses switchi (ähli namaz bildiriş sesleri) ─────────
+                    _buildGlobalSoundTile(isDark, tt, tc, sc, borderColor),
                   ],
                 ),
               ),
@@ -378,12 +380,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 25),
               ],
 
-              // ── Wagtlary sazlamak accordion ───────────────────────────────────
-              _buildOffsetSection(isDark, tt, tc, sc, cardBg, borderColor),
+              // ── Per-prayer ses sazlamalary accordion ─────────────────────────
+              _buildPrayerSoundSection(isDark, tt, tc, sc, cardBg, borderColor),
               const SizedBox(height: 20),
 
-              // ── Per-prayer sound accordion ───────────────────────────────────
-              _buildPrayerSoundSection(isDark, tt, tc, sc, cardBg, borderColor),
+              // ── Wagtlary sazlamak accordion ───────────────────────────────────
+              _buildOffsetSection(isDark, tt, tc, sc, cardBg, borderColor),
               const SizedBox(height: 25),
 
               // About + Legal + Contact Support
@@ -832,6 +834,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ── Global Bildiriş Ses ListTile (ana kart içinde) ─────────────────────────
+  Widget _buildGlobalSoundTile(
+    bool isDark,
+    TextTheme tt,
+    Color tc,
+    Color sc,
+    Color borderColor,
+  ) {
+    final appState = widget.appState;
+    final globalSoundOn = appState.notificationSoundEnabled;
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: globalSoundOn
+              ? AppColors.emeraldGreen.withValues(alpha: 0.12)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.07)
+                  : Colors.black.withValues(alpha: 0.05)),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          globalSoundOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+          color: globalSoundOn ? AppColors.emeraldGreen : sc,
+        ),
+      ),
+      title: Text(
+        TkTranslations.notificationSoundSetting,
+        style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        globalSoundOn
+            ? 'Namaz bildiriş sesleri işjeň'
+            : 'Ähli namaz bildiriş sesleri öçük',
+        style: tt.bodySmall?.copyWith(
+          color: globalSoundOn ? AppColors.emeraldGreen : sc,
+          fontSize: 11,
+        ),
+      ),
+      trailing: Switch.adaptive(
+        value: globalSoundOn,
+        activeThumbColor: Colors.white,
+        activeTrackColor: AppColors.emeraldGreen,
+        inactiveThumbColor: isDark ? Colors.white38 : Colors.white,
+        inactiveTrackColor: isDark
+            ? Colors.white.withValues(alpha: 0.12)
+            : Colors.black.withValues(alpha: 0.1),
+        onChanged: (v) {
+          HapticFeedback.selectionClick();
+          appState.toggleNotificationSound(v);
+        },
+      ),
+    );
+  }
+
   // ── Bildiriş Ses Sazlamalary Accordion ────────────────────────────────────────
   Widget _buildPrayerSoundSection(
     bool isDark,
@@ -875,9 +933,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           iconColor: AppColors.emeraldGreen,
           collapsedIconColor: sc,
           children: [
-            // Per-prayer sound rows
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Column(
                 children: List.generate(_prayerKeys.length, (i) {
                   final key = _prayerKeys[i];
@@ -953,91 +1010,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   );
                 }),
-              ),
-            ),
-
-            // ── Divider ──────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Divider(color: borderColor, height: 1),
-            ),
-
-            // ── Global notification sound toggle (master) — always at bottom ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: globalSoundOn
-                      ? AppColors.emeraldGreen.withValues(alpha: isDark ? 0.10 : 0.07)
-                      : (isDark
-                          ? Colors.white.withValues(alpha: 0.04)
-                          : Colors.black.withValues(alpha: 0.03)),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: globalSoundOn
-                        ? AppColors.emeraldGreen.withValues(alpha: 0.35)
-                        : borderColor,
-                    width: globalSoundOn ? 1.5 : 1.0,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: globalSoundOn
-                            ? AppColors.emeraldGreen.withValues(alpha: 0.15)
-                            : (isDark
-                                ? Colors.white.withValues(alpha: 0.07)
-                                : Colors.black.withValues(alpha: 0.05)),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        globalSoundOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                        color: globalSoundOn ? AppColors.emeraldGreen : sc,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            TkTranslations.notificationSoundSetting,
-                            style: tt.bodyMedium?.copyWith(
-                              color: tc,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            globalSoundOn
-                                ? 'Namaz bildiriş sesleri işjeň'
-                                : 'Ähli namaz bildiriş sesleri öçük',
-                            style: tt.bodySmall?.copyWith(
-                              color: globalSoundOn ? AppColors.emeraldGreen : sc,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch.adaptive(
-                      value: globalSoundOn,
-                      activeThumbColor: Colors.white,
-                      activeTrackColor: AppColors.emeraldGreen,
-                      inactiveThumbColor: isDark ? Colors.white38 : Colors.white,
-                      inactiveTrackColor: isDark
-                          ? Colors.white.withValues(alpha: 0.12)
-                          : Colors.black.withValues(alpha: 0.1),
-                      onChanged: (v) {
-                        HapticFeedback.selectionClick();
-                        appState.toggleNotificationSound(v);
-                      },
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

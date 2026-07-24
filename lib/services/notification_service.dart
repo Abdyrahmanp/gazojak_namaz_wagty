@@ -307,6 +307,13 @@ class NotificationService {
         final prayerTime = times[key]!;
         if (!prayerTime.isAfter(now)) continue;
 
+        // Per-prayer sound override: if global is off OR per-prayer toggle is
+        // off, skip scheduling this notification entirely — do NOT just silence
+        // it, because a soundless pop-up would still be delivered.
+        final perPrayerEnabled = prayerSoundEnabled == null ||
+            (prayerSoundEnabled[key] ?? true);
+        if (!soundEnabled || !perPrayerEnabled) continue;
+
         final prayerName = TkTranslations.prayerNamesShort[key] ?? key;
         final id = alertBaseId + dayIndex * 10 + i;
         final tzTime = tz.TZDateTime.from(prayerTime, tz.local);
@@ -321,17 +328,13 @@ class NotificationService {
             : 'Gazojak şäherinde $prayerName wagty girdi. Namazyňyzy berjaý etmegi unutmaň.';
 
         try {
-          // Per-prayer sound override: if the global switch is on, check the
-          // per-prayer toggle; if global is off, always silent.
-          final perPrayerSoundOn = soundEnabled &&
-              (prayerSoundEnabled == null || (prayerSoundEnabled[key] ?? true));
           await _plugin.zonedSchedule(
             id: id,
             title: notifTitle,
             body: notifBody,
             scheduledDate: tzTime,
             notificationDetails: NotificationDetails(
-              android: _alertDetails(perPrayerSoundOn),
+              android: _alertDetails(true),
             ),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );
