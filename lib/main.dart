@@ -58,20 +58,64 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     final granted = await NotificationService().requestPermissions();
     if (!granted && context.mounted) {
+      final isDark = widget.appState.isDarkMode;
+      final tc = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+      final bg = isDark ? AppColors.darkDialogBg : Colors.white;
+      final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+
       showDialog(
         context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Bildiriş rugsady'),
-          content: const Text(
-            'Namaz wagty habarlandyryşlary we yzygiderli wagtlar paneli işlemegi üçin '
-            'bildiriş rugsadyny bermegiňizi haýyş edýäris.',
+        builder: (dialogCtx) => Dialog(
+          backgroundColor: bg,
+          elevation: isDark ? 24 : 8,
+          shadowColor: isDark ? Colors.black54 : Colors.black12,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: borderColor, width: 1.5),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Bolýar'),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.notifications_off_rounded, color: Colors.orange, size: 28),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Bildiriş rugsady',
+                  style: TextStyle(color: tc, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Namaz wagty habarlandyryşlary we yzygiderli wagtlar paneli işlemegi üçin '
+                  'bildiriş rugsadyny bermegiňizi haýyş edýäris.',
+                  style: TextStyle(color: tc, fontSize: 14, height: 1.55),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogCtx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Bolýar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
     }

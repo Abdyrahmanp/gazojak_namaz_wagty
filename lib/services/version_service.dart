@@ -36,9 +36,9 @@ class VersionService {
   static const String defaultVersionUrl = SiteConfig.versionJsonUrl;
 
   // Current app hardcoded version
-  static const String currentVersionName = '1.1.0';
-  static const int currentVersionCode = 2;
-  static const String currentReleaseDate = '09.07.2026';
+  static const String currentVersionName = '1.1.1';
+  static const int currentVersionCode = 3;
+  static const String currentReleaseDate = '19.08.2026';
 
   /// Fetches version info from the remote JSON file.
   /// byethost3.com AES challenge'ını otomatik çözer.

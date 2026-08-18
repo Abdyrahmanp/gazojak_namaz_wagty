@@ -108,7 +108,14 @@ class AppState extends ChangeNotifier {
         }
       };
       await _rescheduleNotifications();
-      _updatePersistentPanel();
+      if (_persistentNotificationEnabled) {
+        _updatePersistentPanel();
+      } else {
+        // User previously disabled the panel — ensure it stays hidden even
+        // after app restart (fixes the race where _computePrayerState showed
+        // the panel with the default true value before prefs were loaded).
+        await NotificationService().cancelPersistentNotification();
+      }
     } catch (e) {
       // ignore: avoid_print
       print('Notification setup error: $e');

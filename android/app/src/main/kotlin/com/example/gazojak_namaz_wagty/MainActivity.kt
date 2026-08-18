@@ -1,5 +1,6 @@
 package com.example.gazojak_namaz_wagty
 
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
@@ -10,8 +11,9 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
-    private val BATTERY_CHANNEL = "com.example.gazojak_namaz_wagty/battery"
-    private val PANEL_CHANNEL   = "com.example.gazojak_namaz_wagty/panel"
+    private val BATTERY_CHANNEL    = "com.example.gazojak_namaz_wagty/battery"
+    private val PANEL_CHANNEL      = "com.example.gazojak_namaz_wagty/panel"
+    private val AUTOSTART_CHANNEL  = "com.example.gazojak_namaz_wagty/autostart"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -79,6 +81,18 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // ── Autostart channel ─────────────────────────────────────────────────
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AUTOSTART_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "openAutoStartSettings" -> {
+                        val opened = openAutoStartSettings()
+                        result.success(opened)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     private fun openBatteryOptimization(packageName: String) {
@@ -103,5 +117,75 @@ class MainActivity : FlutterActivity() {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })
         } catch (_: Exception) {}
+    }
+
+    /**
+     * Attempts to open OEM-specific autostart / background-launch settings.
+     * Returns true if any intent was successfully launched.
+     */
+    private fun openAutoStartSettings(): Boolean {
+        val autostartIntents = listOf(
+            // Xiaomi (MIUI)
+            Intent().setComponent(ComponentName(
+                "com.miui.securitycenter",
+                "com.miui.permcenter.autostart.AutoStartManagementActivity"
+            )),
+            // Huawei (EMUI)
+            Intent().setComponent(ComponentName(
+                "com.huawei.systemmanager",
+                "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"
+            )),
+            // Oppo (ColorOS)
+            Intent().setComponent(ComponentName(
+                "com.coloros.safecenter",
+                "com.coloros.safecenter.startupapp.StartupAppListActivity"
+            )),
+            // Vivo (Funtouch OS)
+            Intent().setComponent(ComponentName(
+                "com.vivo.permissionmanager",
+                "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"
+            )),
+            // Samsung
+            Intent().setComponent(ComponentName(
+                "com.samsung.android.lool",
+                "com.samsung.android.sm.battery.ui.BatteryActivity"
+            )),
+            // Letv
+            Intent().setComponent(ComponentName(
+                "com.letv.android.letvsafe",
+                "com.letv.android.letvsafe.AutobootManageActivity"
+            )),
+            // OnePlus (OxygenOS)
+            Intent().setComponent(ComponentName(
+                "com.oneplus.security",
+                "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity"
+            )),
+            // Asus ZenUI
+            Intent().setComponent(ComponentName(
+                "com.asus.mobilemanager",
+                "com.asus.mobilemanager.autostart.AutoStartActivity"
+            )),
+        )
+
+        for (intent in autostartIntents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                return true
+            } catch (_: Exception) {
+                // This OEM intent not available, try next
+            }
+        }
+
+        // Fallback: open app details settings
+        try {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${applicationContext.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+            return true
+        } catch (_: Exception) {}
+
+        return false
     }
 }

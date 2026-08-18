@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state.dart';
 import '../utils/email_launcher.dart';
@@ -21,33 +20,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _msgCtrl = TextEditingController();
-  bool _batteryDismissed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBatteryDismissed();
-  }
-
-  Future<void> _loadBatteryDismissed() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (mounted) {
-        setState(() {
-          _batteryDismissed = prefs.getBool('battery_warning_dismissed') ?? false;
-        });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _dismissBatteryWarning() async {
-    HapticFeedback.mediumImpact();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('battery_warning_dismissed', true);
-      if (mounted) setState(() => _batteryDismissed = true);
-    } catch (_) {}
-  }
 
   @override
   void dispose() {
@@ -299,86 +271,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 25),
 
-              // Batarya Optimizasyon Uyarısı — gizlenmediyse göster
-              if (!_batteryDismissed) ...[
-                Text('Bildirişler', style: tt.titleLarge?.copyWith(color: tc, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: isDark ? 0.08 : 0.06),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
-                  ),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-                      childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.battery_alert_rounded, color: Colors.orange, size: 20),
-                      ),
-                      title: Text(
-                        TkTranslations.batteryOptTitle,
-                        style: tt.titleMedium?.copyWith(
-                          color: tc,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      iconColor: Colors.orange,
-                      collapsedIconColor: Colors.orange.withValues(alpha: 0.7),
-                      children: [
-                        Text(
-                          TkTranslations.batteryOptMessage,
-                          style: tt.bodySmall?.copyWith(
-                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                            height: 1.55,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _openBatterySettings,
-                            icon: const Icon(Icons.settings_outlined, size: 18),
-                            label: Text(TkTranslations.batteryOptCheck,
-                                style: const TextStyle(fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _dismissBatteryWarning,
-                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.emeraldGreen),
-                            label: const Text(
-                              'Sazlamany etdim, ýap',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.emeraldGreen),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppColors.emeraldGreen),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 25),
-              ],
+              // ── Zerur bolan rugsatlar ──────────────────────────────────────────
+              _buildPermissionsSection(isDark, tt, tc, sc, cardBg, borderColor),
+              const SizedBox(height: 20),
 
               // ── Per-prayer ses sazlamalary accordion ─────────────────────────
               _buildPrayerSoundSection(isDark, tt, tc, sc, cardBg, borderColor),
@@ -662,6 +557,188 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _openAutoStartSettings() async {
+    HapticFeedback.selectionClick();
+    const channel = MethodChannel('com.example.gazojak_namaz_wagty/autostart');
+
+    try {
+      await channel.invokeMethod('openAutoStartSettings');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Sazlamalar → Programmalar → Gazojak namaz wagty → Awto-başlatmak (Autostart) rugsady beriň.',
+            style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 6),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
+  }
+
+  // ── Zerur bolan rugsatlar Accordion ─────────────────────────────────────────
+  Widget _buildPermissionsSection(
+    bool isDark,
+    TextTheme tt,
+    Color tc,
+    Color sc,
+    Color cardBg,
+    Color borderColor,
+  ) {
+    final sectionBg = isDark
+        ? Colors.white.withValues(alpha: 0.03)
+        : Colors.black.withValues(alpha: 0.02);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.emeraldGreen.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.security_rounded, color: AppColors.emeraldGreen),
+          ),
+          title: Text(
+            'Zerur bolan rugsatlar',
+            style: tt.titleMedium?.copyWith(color: tc, fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(
+            'Bildirişleriň wagtynda gelmegi üçin gerekli rugsatlar',
+            style: tt.bodySmall?.copyWith(color: sc),
+          ),
+          iconColor: AppColors.emeraldGreen,
+          collapsedIconColor: sc,
+          children: [
+            // 1. Batareýa rugsady
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: sectionBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.battery_saver_rounded, color: Colors.orange, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Batareýa optimallaşdyrmasy',
+                          style: tt.titleSmall?.copyWith(color: tc, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Xiaomi, Samsung ýaly telefonlarda bildiriş doňmazlygy üçin "Çäklendirmesiz" (No restrictions) rugsady gerek.',
+                    style: tt.bodySmall?.copyWith(color: sc, height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _openBatterySettings,
+                      icon: const Icon(Icons.battery_charging_full_rounded, size: 18),
+                      label: const Text('Batareýa sazlamalary', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // 2. Awto-başlatmak (Autozapusk) rugsady
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: sectionBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.emeraldGreen.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.autorenew_rounded, color: AppColors.emeraldGreen, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Awto-başlatmak (Autozapusk) rugsady',
+                          style: tt.titleSmall?.copyWith(color: tc, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Telefon täzeden açylanda ýa-da arassalananda namaz wagty bildirişleriniň awtomatiki işlemegi üçin rugsat gerek.',
+                    style: tt.bodySmall?.copyWith(color: sc, height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _openAutoStartSettings,
+                      icon: const Icon(Icons.launch_rounded, size: 18),
+                      label: const Text('Autozapusk sazlamalary', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.emeraldGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
 

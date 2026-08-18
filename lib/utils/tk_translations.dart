@@ -110,7 +110,7 @@ class TkTranslations {
       'Bütinleý internetsiz we howpsuz işlemek üçin niýetlenendir.';
   static const String termsTitle   = 'Ulanyş Şertleri';
   static const String termsContent =
-      'Programmadaky namaz wagtlamalary ýörite Gazojak şäheri üçin taýýarlandy. '
+      'Programmadaky namaz wagtlary ýörite Gazojak şäheri üçin taýýarlandy. '
       'Programma diňe maglumat bermek maksady bilen hyzmat edýär.';
 
   // ── Tasbih ──────────────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ class TkTranslations {
   static const String offsetReset                 = 'Nola getirmek';
   static const String minutesSuffix               = 'm';
   static const String aboutTitle                  = 'Biz Barada';
-  static const String appVersion                  = 'Wersiýa 1.1.0';
+  static const String appVersion                  = 'Wersiýa 1.1.1';
 
   // Per-prayer sound settings
   static const String prayerSoundTitle    = 'Namaz ses sazlamalary';
